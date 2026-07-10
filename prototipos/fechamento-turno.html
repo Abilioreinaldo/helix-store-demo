@@ -1,0 +1,624 @@
+<meta charset="utf-8">
+<title>Helix Store — Fechamento de Turno</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA; --ok-line:#BFE0CD;
+    --bad:#C0392B; --bad-tint:#F8E6E3; --bad-line:#EEC4BD;
+    --warn:#B7791F; --warn-tint:#F6EEDC;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 12px 32px -12px rgba(22,26,36,.18);
+    --radius:14px;
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding:28px 20px 60px;
+  }
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+
+  .app{
+    max-width:1000px; margin:0 auto; background:var(--surface);
+    border:1px solid var(--line); border-radius:calc(var(--radius) + 4px);
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+
+  /* ---------- Topbar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:20px;
+    padding:16px 22px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#fff,#fbfdfd);
+  }
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px; flex:none}
+  .brand .wm{display:flex; flex-direction:column; line-height:1.15}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; align-items:center; gap:6px}
+  .brand .wm b .store{color:var(--brand); font-weight:700}
+  .brand .wm span{font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  .ctx{display:flex; align-items:center; gap:22px}
+  .ctx .cell{display:flex; flex-direction:column; text-align:right; line-height:1.25}
+  .ctx .cell .k{font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); font-weight:600}
+  .ctx .cell .v{font-size:13.5px; font-weight:600; color:var(--ink-2)}
+  .ctx .divide{width:1px; height:26px; background:var(--line)}
+  @media(max-width:720px){ .ctx .cell:first-child, .ctx .divide:first-of-type{display:none} }
+
+  /* ---------- Stepper ---------- */
+  .stepper{display:flex; border-bottom:1px solid var(--line); background:var(--surface-2)}
+  .step{
+    flex:1; display:flex; align-items:center; gap:11px; padding:13px 18px;
+    border:0; background:transparent; cursor:pointer; text-align:left;
+    border-right:1px solid var(--line-2); font-family:inherit; color:var(--muted);
+    position:relative; transition:background .15s;
+  }
+  .step:last-child{border-right:0}
+  .step:hover{background:#eef3f3}
+  .step .dot{
+    width:25px; height:25px; border-radius:50%; flex:none; display:grid; place-items:center;
+    background:#fff; border:1.5px solid var(--line); color:var(--muted);
+    font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums;
+  }
+  .step .lbl{display:flex; flex-direction:column; line-height:1.2}
+  .step .lbl b{font-size:13px; font-weight:600; color:var(--ink-2); letter-spacing:-.005em}
+  .step .lbl span{font-size:10.5px; color:var(--faint)}
+  .step[aria-current="true"]{background:#fff}
+  .step[aria-current="true"]::after{content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--brand)}
+  .step[aria-current="true"] .dot{background:var(--brand); border-color:var(--brand); color:#fff}
+  .step[aria-current="true"] .lbl b{color:var(--ink)}
+  .step.done .dot{background:var(--ok-tint); border-color:var(--ok-line); color:var(--ok)}
+  .step:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
+  @media(max-width:720px){ .step .lbl span{display:none} }
+
+  /* ---------- Verdict ---------- */
+  .verdict{
+    display:flex; align-items:stretch; gap:0; margin:0;
+    border-bottom:1px solid var(--line); background:#fff;
+  }
+  .verdict .stripe{width:6px; flex:none; background:var(--muted); transition:background .2s}
+  .verdict.ok .stripe{background:var(--ok)}
+  .verdict.bad .stripe{background:var(--bad)}
+  .verdict.sobra .stripe{background:var(--warn)}
+  .verdict .lead{padding:18px 24px; display:flex; flex-direction:column; gap:3px; min-width:0}
+  .verdict .tag{
+    display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+  }
+  .verdict .tag .pip{width:8px; height:8px; border-radius:50%; background:currentColor}
+  .verdict.ok .tag{color:var(--ok)} .verdict.bad .tag{color:var(--bad)} .verdict.sobra .tag{color:var(--warn)}
+  .verdict .big{font-size:30px; font-weight:680; letter-spacing:-.02em; line-height:1.05}
+  .verdict .sub{font-size:12.5px; color:var(--muted)}
+  .verdict .sub b{color:var(--ink-2); font-weight:600}
+  .verdict .totals{
+    margin-left:auto; display:flex; align-items:center; gap:26px; padding:18px 26px 18px 20px;
+    border-left:1px solid var(--line-2);
+  }
+  .verdict .totals .t{display:flex; flex-direction:column; text-align:right; gap:2px}
+  .verdict .totals .t .k{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); font-weight:600}
+  .verdict .totals .t .v{font-size:16px; font-weight:640; color:var(--ink); letter-spacing:-.01em}
+  @media(max-width:720px){ .verdict{flex-wrap:wrap} .verdict .totals{margin-left:0; width:100%; border-left:0; border-top:1px solid var(--line-2); justify-content:space-between} .verdict .big{font-size:26px} }
+
+  /* ---------- Panels ---------- */
+  .body{padding:24px 24px 6px}
+  .panel{display:none}
+  .panel[data-active]{display:block; animation:rise .28s ease}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){ .panel[data-active]{animation:none} }
+
+  .phead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px}
+  .phead h2{margin:0; font-size:18px; font-weight:640; letter-spacing:-.015em}
+  .phead p{margin:3px 0 0; font-size:13px; color:var(--muted); max-width:56ch}
+  .hint{
+    display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:600;
+    color:var(--brand-ink); background:var(--brand-tint); padding:6px 11px; border-radius:999px; white-space:nowrap;
+  }
+  .hint svg{width:14px; height:14px}
+
+  /* KPIs do turno */
+  .kpis{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:18px}
+  .kpi{border:1px solid var(--line); border-radius:12px; padding:13px 15px; background:var(--surface-2)}
+  .kpi .k{font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .kpi .v{font-size:19px; font-weight:660; letter-spacing:-.01em; margin-top:3px}
+  .kpi .s{font-size:11px; color:var(--muted); margin-top:1px}
+  @media(max-width:820px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+
+  /* Cards de sangrias / quebras */
+  .cards2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:8px}
+  @media(max-width:820px){ .cards2{grid-template-columns:1fr} }
+  .card{border:1px solid var(--line); border-radius:13px; background:#fff; overflow:hidden}
+  .card .ch{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line-2); background:var(--surface-2)}
+  .card .ch b{font-size:13px; font-weight:650; letter-spacing:-.005em}
+  .card .ch span{font-size:11px; color:var(--faint)}
+  .mvt{display:flex; align-items:center; gap:12px; padding:11px 16px; border-bottom:1px solid var(--line-2); font-size:13px}
+  .mvt:last-child{border-bottom:0}
+  .mvt .ic{width:28px; height:28px; border-radius:8px; flex:none; display:grid; place-items:center; background:var(--surface-2); color:var(--ink-2)}
+  .mvt .ic svg{width:15px; height:15px}
+  .mvt .ic.out{background:var(--warn-tint); color:var(--warn)}
+  .mvt .ic.in{background:var(--ok-tint); color:var(--ok)}
+  .mvt .ic.qbr{background:var(--bad-tint); color:var(--bad)}
+  .mvt .tx{display:flex; flex-direction:column; line-height:1.3; min-width:0}
+  .mvt .tx b{font-weight:600; font-size:13px}
+  .mvt .tx span{font-size:11px; color:var(--faint)}
+  .mvt .amt{margin-left:auto; font-weight:640; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .mvt .amt.out{color:var(--warn)} .mvt .amt.in{color:var(--ok)} .mvt .amt.qbr{color:var(--bad)}
+  .card .cfoot{padding:10px 16px; font-size:11.5px; color:var(--muted); background:var(--surface-2); border-top:1px solid var(--line-2)}
+  .card .cfoot b{color:var(--ink-2); font-weight:600}
+
+  /* Pills */
+  .pill{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px}
+  .pill svg{width:12px; height:12px}
+  .pill.ok{color:var(--ok); background:var(--ok-tint)}
+  .pill.warn{color:var(--warn); background:var(--warn-tint)}
+  .pill.bad{color:var(--bad); background:var(--bad-tint)}
+
+  /* Tabela de conciliação */
+  .tbl{width:100%; border-collapse:collapse; font-size:13.5px}
+  .tbl thead th{
+    text-align:right; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--faint); font-weight:700; padding:0 14px 9px; border-bottom:1px solid var(--line);
+  }
+  .tbl thead th:first-child{text-align:left}
+  .tbl tbody td{padding:13px 14px; border-bottom:1px solid var(--line-2); text-align:right; vertical-align:middle}
+  .tbl tbody tr:hover{background:var(--surface-2)}
+  .tbl tbody tr.cash-row{background:var(--brand-tint)}
+  .tbl tbody tr.cash-row:hover{background:var(--brand-tint)}
+  .tbl tbody tr.cash-row td{border-bottom-color:#d7defa}
+  .prod{display:flex; align-items:center; gap:11px; text-align:left}
+  .prod .dot{width:9px; height:9px; border-radius:50%; flex:none}
+  .prod .pn{display:flex; flex-direction:column; line-height:1.25}
+  .prod .pn b{font-weight:600; font-size:13.5px}
+  .prod .pn span{font-size:11px; color:var(--faint)}
+  .blind{display:inline-flex; align-items:center; gap:6px; color:var(--faint); font-size:12px; font-weight:600; letter-spacing:.12em}
+  .blind svg{width:13px; height:13px}
+  .cashin{
+    width:132px; text-align:right; font-family:inherit; font-size:16px; font-weight:640;
+    font-variant-numeric:tabular-nums; padding:9px 12px; border:1px solid var(--brand);
+    border-radius:10px; background:#fff; color:var(--ink);
+  }
+  .cashin:focus{outline:none; box-shadow:0 0 0 3px #cdd7f8}
+  .cash-help{display:block; font-size:10.5px; color:var(--brand-ink); font-weight:600; margin-top:4px}
+  .val{font-weight:650}
+  .tbl tfoot td{padding:14px; font-weight:640; border-top:2px solid var(--line)}
+  .tbl tfoot .lab{text-align:left; color:var(--muted); font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:.06em}
+  .delta-ok{color:var(--ok); font-weight:650} .delta-bad{color:var(--bad); font-weight:700} .delta-warn{color:var(--warn); font-weight:700}
+
+  .recon-note{font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:8px; padding:2px; margin-top:14px}
+  .recon-note svg{width:15px; height:15px; flex:none}
+
+  /* Justificativa */
+  .justify{
+    display:none; margin-top:16px; padding:14px 16px; border:1px solid var(--bad-line);
+    border-radius:12px; background:var(--bad-tint);
+  }
+  .justify.show{display:block; animation:rise .25s ease}
+  .justify label{display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--bad); margin-bottom:8px}
+  .justify label svg{width:15px; height:15px}
+  .justify textarea{
+    width:100%; min-height:64px; resize:vertical; font-family:inherit; font-size:13.5px;
+    padding:10px 12px; border:1px solid var(--bad-line); border-radius:9px; background:#fff; color:var(--ink);
+  }
+  .justify textarea:focus{outline:none; border-color:var(--bad); box-shadow:0 0 0 3px #f3d4cf}
+  .justify .jhint{font-size:11px; color:var(--muted); margin-top:6px}
+
+  /* Confirm */
+  .recap{max-width:680px}
+  .recap .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px}
+  .recap .rcard{border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--surface-2)}
+  .recap .rcard .k{font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .recap .rcard .v{font-size:20px; font-weight:660; letter-spacing:-.01em; margin-top:4px}
+  .recap .rcard .v.small{font-size:15px; font-weight:600; color:var(--ink-2)}
+  .checklist{list-style:none; padding:0; margin:0 0 8px; display:flex; flex-direction:column; gap:8px}
+  .checklist li{display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--ink-2)}
+  .checklist li svg{width:17px; height:17px; flex:none; color:var(--ok)}
+
+  /* Footer nav */
+  .foot{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:16px 24px; border-top:1px solid var(--line); margin-top:18px; background:var(--surface-2);
+  }
+  .foot .note{font-size:11.5px; color:var(--faint); max-width:48ch}
+  .foot .acts{display:flex; gap:10px; margin-left:auto}
+  .btn{
+    font-family:inherit; font-size:13.5px; font-weight:600; padding:10px 18px; border-radius:10px;
+    border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer; transition:.14s;
+  }
+  .btn:hover{border-color:var(--muted)}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .btn.primary{background:var(--brand); border-color:var(--brand); color:#fff}
+  .btn.primary:hover{background:var(--brand-ink); border-color:var(--brand-ink)}
+  .btn.close{background:var(--ok); border-color:var(--ok); color:#fff}
+  .btn.close:hover{filter:brightness(.95)}
+  .btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+  /* success overlay */
+  .done-state{display:none; padding:46px 24px 40px; text-align:center; flex-direction:column; align-items:center; gap:8px}
+  .done-state.show{display:flex; animation:rise .3s ease}
+  .done-state .ring{width:66px; height:66px; border-radius:50%; background:var(--ok-tint); display:grid; place-items:center; margin-bottom:6px}
+  .done-state .ring svg{width:34px; height:34px; color:var(--ok)}
+  .done-state h2{margin:0; font-size:22px; font-weight:660; letter-spacing:-.02em}
+  .done-state p{margin:0; color:var(--muted); font-size:14px}
+  .done-state .meta{margin-top:14px; display:flex; gap:26px; font-variant-numeric:tabular-nums; align-items:flex-start}
+  .done-state .meta .k{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .done-state .meta .v{font-size:16px; font-weight:640}
+  .done-state .central{margin-top:18px; font-size:12px; color:var(--muted); background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:9px 14px; max-width:60ch}
+  .done-state .central b{color:var(--ink-2); font-weight:600}
+
+  .foot-caption{max-width:1000px; margin:14px auto 0; padding:0 6px; font-size:11.5px; color:var(--faint); text-align:center; line-height:1.5}
+  .foot-caption b{color:var(--muted); font-weight:600}
+</style>
+
+<div class="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/>
+          </linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/>
+          </linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Fechamento de caixa</span></div>
+    </div>
+    <div class="ctx">
+      <div class="cell"><span class="k">Loja</span><span class="v">Aurora Centro · LOJ-004</span></div>
+      <div class="divide"></div>
+      <div class="cell"><span class="k">Turno</span><span class="v">1 · 06h00–14h00</span></div>
+      <div class="divide"></div>
+      <div class="cell"><span class="k">Caixa</span><span class="v">Carla M. · sex, 10 jul 2026</span></div>
+    </div>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper" role="tablist">
+    <button class="step" data-step="0" aria-current="true"><span class="dot">1</span><span class="lbl"><b>Resumo do turno</b><span>Vendas, sangrias e quebras</span></span></button>
+    <button class="step" data-step="1"><span class="dot">2</span><span class="lbl"><b>Conciliação</b><span>Sistema × contado por forma</span></span></button>
+    <button class="step" data-step="2"><span class="dot">3</span><span class="lbl"><b>Fechar</b><span>Revisar e confirmar</span></span></button>
+  </div>
+
+  <!-- Verdict bar -->
+  <div class="verdict ok" id="verdict">
+    <div class="stripe"></div>
+    <div class="lead">
+      <span class="tag"><span class="pip"></span><span id="v-tag">Falta no caixa</span></span>
+      <div class="big num" id="v-big">Falta R$ 4,50</div>
+      <div class="sub" id="v-sub"></div>
+    </div>
+    <div class="totals">
+      <div class="t"><span class="k">Sistema</span><span class="v num" id="v-exp">R$ 9.840,00</span></div>
+      <div class="t"><span class="k">Conferido</span><span class="v num" id="v-rec">R$ 9.835,50</span></div>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- STEP 1 · Resumo -->
+    <section class="panel" data-panel="0" data-active>
+      <div class="phead">
+        <div><h2>Resumo do turno</h2><p>Tudo que o PDV registrou entre 06h00 e 14h00. Sangrias, suprimento e quebras já entram na conta do fechamento.</p></div>
+        <span class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Consolidado do PDV às 14h01</span>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="k">Cupons</div><div class="v num">412</div><div class="s">emitidos no turno</div></div>
+        <div class="kpi"><div class="k">Faturamento</div><div class="v num">R$ 9.840</div><div class="s">todas as formas</div></div>
+        <div class="kpi"><div class="k">Ticket médio</div><div class="v num">R$ 23,90</div><div class="s">rede: R$ 24,80</div></div>
+        <div class="kpi"><div class="k">Sangrias</div><div class="v num">2</div><div class="s">R$ 800 ao cofre</div></div>
+        <div class="kpi"><div class="k">Suprimento</div><div class="v num">1</div><div class="s">R$ 200 de troco</div></div>
+      </div>
+
+      <div class="cards2">
+        <div class="card">
+          <div class="ch"><b>Sangrias &amp; suprimento</b><span>gaveta do turno 1</span></div>
+          <div class="mvt">
+            <div class="ic in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+            <div class="tx"><b>Suprimento · troco inicial</b><span>06h02 · abertura do caixa · Carla M.</span></div>
+            <span class="amt in num">+ R$ 200,00</span>
+          </div>
+          <div class="mvt">
+            <div class="ic out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+            <div class="tx"><b>Sangria ao cofre</b><span>10h20 · autorizada por Renata P. (gerente) · código 7314</span></div>
+            <span class="amt out num">− R$ 500,00</span>
+          </div>
+          <div class="mvt">
+            <div class="ic out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+            <div class="tx"><b>Sangria ao cofre</b><span>12h40 · autorizada por Renata P. (gerente) · código 7351</span></div>
+            <span class="amt out num">− R$ 300,00</span>
+          </div>
+          <div class="cfoot">As sangrias e o suprimento <b>já entram na conta do contado</b> — você só confere a gaveta e o cofre juntos.</div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><b>Quebras registradas no turno</b><span>QBR-0119 · radar de validade</span></div>
+          <div class="mvt">
+            <div class="ic qbr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 3"/></svg></div>
+            <div class="tx"><b>Sanduíche Natural Frango · PRD-00918</b><span>2 un vencidas hoje · baixadas às 07h15</span></div>
+            <span class="amt qbr num">− R$ 33,80</span>
+          </div>
+          <div class="mvt">
+            <div class="ic qbr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 3"/></svg></div>
+            <div class="tx"><b>Pão de Queijo (kg) · PRD-01203</b><span>0,098 kg vencidos · baixados às 07h18</span></div>
+            <span class="amt qbr num">− R$ 4,90</span>
+          </div>
+          <div class="mvt" style="border-bottom:0">
+            <div class="tx"><b style="font-weight:600; color:var(--muted)">Total da quebra QBR-0119</b><span>3 itens perecíveis · não afeta o caixa, afeta a margem</span></div>
+            <span class="amt qbr num">R$ 38,70</span>
+          </div>
+          <div class="cfoot">Apontadas pelo <b>radar de validade</b> antes da abertura — a loja tinha 14 itens vencendo hoje.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2 · Conciliação -->
+    <section class="panel" data-panel="1">
+      <div class="phead">
+        <div><h2>Conciliação por forma de pagamento</h2><p>Cartões e PIX conciliam sozinhos pela integração. Só o dinheiro depende de você — e a contagem é <b>às cegas</b>: digite o que contou, sem ver o esperado.</p></div>
+        <span class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>4 de 5 formas conciliadas automaticamente</span>
+      </div>
+
+      <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Forma</th><th>Cupons</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Status</th></tr></thead>
+        <tbody id="recon-body"></tbody>
+        <tfoot><tr><td class="lab" colspan="2">Total do turno</td><td class="num val" id="tf-sys"></td><td class="num val" id="tf-cnt"></td><td class="num val" id="tf-dif"></td><td></td></tr></tfoot>
+      </table>
+      </div>
+
+      <div class="justify" id="justify">
+        <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg><span id="justify-title">Diferença acima da tolerância — justificativa obrigatória</span></label>
+        <textarea id="justify-text" placeholder="Ex.: troco dado errado no cupom 000318, cancelamento sem estorno na gaveta…" aria-label="Justificativa da diferença"></textarea>
+        <div class="jhint">A justificativa vai junto com o fechamento para a Central da rede e fica no histórico do caixa.</div>
+      </div>
+
+      <p class="recon-note"><svg viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span id="recon-note"></span></p>
+    </section>
+
+    <!-- STEP 3 · Fechar -->
+    <section class="panel" data-panel="2">
+      <div class="phead"><div><h2>Revisar e fechar</h2><p>Confira o resumo. Ao fechar, o caixa vira somente-leitura e o resultado sobe para a Central da rede.</p></div></div>
+      <div class="recap">
+        <div class="grid">
+          <div class="rcard"><div class="k">Faturamento do turno</div><div class="v num">R$ 9.840,00</div></div>
+          <div class="rcard"><div class="k">Cupons · ticket médio</div><div class="v num">412 · R$ 23,90</div></div>
+          <div class="rcard"><div class="k">Resultado do caixa</div><div class="v small" id="rc-diff"></div></div>
+          <div class="rcard"><div class="k">Quebras do turno</div><div class="v num small">QBR-0119 · R$ 38,70</div></div>
+        </div>
+        <ul class="checklist">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Débito, crédito, PIX e vale conciliados automaticamente</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>2 sangrias e 1 suprimento autorizados e contabilizados</li>
+          <li id="rc-cash-line"></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SUCCESS -->
+    <div class="done-state" id="done">
+      <div class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <h2>Turno 1 fechado · Aurora Centro</h2>
+      <p>Caixa em somente-leitura · lançamentos gerados · resultado enviado à Central.</p>
+      <div class="meta">
+        <div><div class="k">Faturamento</div><div class="v num">R$ 9.840,00</div></div>
+        <div><div class="k">Caixa</div><div class="v" id="done-pill"></div></div>
+        <div><div class="k">Fechado às</div><div class="v num">14h06</div></div>
+      </div>
+      <div class="central">Este fechamento alimenta a <b>Central da rede</b> em tempo real — turno que atrasa mais de <b>30 min</b> para fechar vira pendência na fila do gestor.</div>
+    </div>
+  </div>
+
+  <!-- Footer nav -->
+  <div class="foot" id="foot">
+    <span class="note" id="foot-note">Passo 1 de 3 · o PDV consolida tudo, você só confere.</span>
+    <div class="acts">
+      <button class="btn" id="btn-back" disabled>Voltar</button>
+      <button class="btn primary" id="btn-next">Próximo</button>
+    </div>
+  </div>
+</div>
+
+<p class="foot-caption">Protótipo Helix Store · fechamento de caixa por turno. &nbsp;<b>O dinheiro é contado às cegas — a operadora digita o que contou sem ver o esperado — e o veredito ao vivo diz na hora se a diferença cabe na tolerância de R$ 5,00;</b> sem pista nem encerrantes: aqui só formas de pagamento conciliam o turno.</p>
+
+<script>
+(function(){
+  const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+  const money = v => BRL.format(v);
+  const TOL = 5.00; // tolerância de caixa (R$)
+
+  // Formas de pagamento — sistema (o que o PDV registrou)
+  const forms = [
+    {id:'debito',  nm:'Cartão de débito',  sub:'TEF · concilia sozinho',              cupons:118, sys:2610.00, cor:'var(--bebidas)',  auto:true},
+    {id:'credito', nm:'Cartão de crédito', sub:'TEF · concilia sozinho',              cupons:104, sys:3180.00, cor:'var(--alimentos)', auto:true},
+    {id:'pix',     nm:'PIX',               sub:'confirmações automáticas do banco',   cupons:71,  sys:1480.00, cor:'var(--perecivel)', auto:true},
+    {id:'vale',    nm:'Vale / benefício',  sub:'VR, Alelo · liquidação D+2',          cupons:23,  sys:430.00,  cor:'var(--servico)',   auto:true},
+    {id:'cash',    nm:'Dinheiro',          sub:'contagem às cegas da gaveta + cofre', cupons:96,  sys:2140.00, cor:'var(--brand)',     auto:false},
+  ];
+  const state = {step:0, cash:2135.50};
+
+  const sysTotal = () => forms.reduce((s,f)=>s+f.sys,0);
+  const counted  = () => forms.reduce((s,f)=>s+(f.auto?f.sys:state.cash),0);
+  const diffCents = () => Math.round((state.cash - 2140.00)*100);
+  const needJustify = () => Math.abs(diffCents()) > Math.round(TOL*100);
+  const justified = () => document.getElementById('justify-text').value.trim().length > 0;
+
+  const okPill  = '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Conciliado</span>';
+  const tolPill = '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Na tolerância</span>';
+  const badPill = '<span class="pill bad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>Justificar</span>';
+  const warnPill= '<span class="pill warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>Justificar</span>';
+
+  // ---- Tabela de conciliação
+  function renderRecon(){
+    const dc = diffCents(), d = dc/100;
+    document.getElementById('recon-body').innerHTML = forms.map(f=>{
+      if(f.auto){
+        return `<tr>
+          <td><div class="prod"><span class="dot" style="background:${f.cor}"></span><span class="pn"><b>${f.nm}</b><span>${f.sub}</span></span></div></td>
+          <td class="num" style="color:var(--muted)">${f.cupons}</td>
+          <td class="num">${money(f.sys)}</td>
+          <td class="num" style="color:var(--muted)">${money(f.sys)}</td>
+          <td class="num delta-ok">exato</td>
+          <td>${okPill}</td>
+        </tr>`;
+      }
+      const dtxt = dc===0 ? 'exato' : (dc>0?'+ ':'− ')+money(Math.abs(d));
+      const dcls = dc===0 ? 'delta-ok' : (Math.abs(dc)<=TOL*100 ? 'delta-ok' : (dc<0?'delta-bad':'delta-warn'));
+      const pill = dc===0 ? okPill : (Math.abs(dc)<=TOL*100 ? tolPill : (dc<0?badPill:warnPill));
+      return `<tr class="cash-row">
+        <td><div class="prod"><span class="dot" style="background:${f.cor}"></span><span class="pn"><b>${f.nm}</b><span>${f.sub}</span></span></div></td>
+        <td class="num" style="color:var(--muted)">${f.cupons}</td>
+        <td><span class="blind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><path d="M1 1l22 22"/></svg>••••• <small style="letter-spacing:0; font-weight:600">cega</small></span></td>
+        <td><input class="cashin num" id="cash-input" type="number" step="0.01" value="${state.cash.toFixed(2)}" aria-label="Dinheiro contado às cegas"><span class="cash-help">gaveta + sangrias do cofre − troco inicial</span></td>
+        <td class="num ${dcls}">${dtxt}</td>
+        <td>${pill}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('tf-sys').textContent = money(sysTotal());
+    document.getElementById('tf-cnt').textContent = money(counted());
+    const tf = document.getElementById('tf-dif');
+    tf.textContent = dc===0 ? 'exato' : (dc>0?'+ ':'− ')+money(Math.abs(d));
+    tf.className = 'num val ' + (dc===0||Math.abs(dc)<=TOL*100 ? 'delta-ok' : (dc<0?'delta-bad':'delta-warn'));
+
+    const inp = document.getElementById('cash-input');
+    inp.addEventListener('input', e=>{
+      const v = parseFloat(e.target.value);
+      state.cash = isNaN(v) ? 0 : v;
+      refresh(false); // não re-renderiza a linha do input enquanto digita
+    });
+  }
+
+  // ---- Atualiza deltas da linha do dinheiro sem recriar o input
+  function patchCashRow(){
+    const row = document.querySelector('.cash-row'); if(!row) return;
+    const dc = diffCents(), d = dc/100;
+    const cells = row.querySelectorAll('td');
+    const dcell = cells[4], scell = cells[5];
+    dcell.textContent = dc===0 ? 'exato' : (dc>0?'+ ':'− ')+money(Math.abs(d));
+    dcell.className = 'num ' + (dc===0||Math.abs(dc)<=TOL*100 ? 'delta-ok' : (dc<0?'delta-bad':'delta-warn'));
+    scell.innerHTML = dc===0 ? okPill : (Math.abs(dc)<=TOL*100 ? tolPill : (dc<0?badPill:warnPill));
+    document.getElementById('tf-cnt').textContent = money(counted());
+    const tf = document.getElementById('tf-dif');
+    tf.textContent = dc===0 ? 'exato' : (dc>0?'+ ':'− ')+money(Math.abs(d));
+    tf.className = 'num val ' + (dc===0||Math.abs(dc)<=TOL*100 ? 'delta-ok' : (dc<0?'delta-bad':'delta-warn'));
+  }
+
+  // ---- Veredito ao vivo + recap
+  function refresh(rerender=true){
+    const dc = diffCents(), d = dc/100, v = document.getElementById('verdict');
+    v.classList.remove('ok','bad','sobra');
+    const sub = document.getElementById('v-sub');
+    if(dc===0){
+      v.classList.add('ok');
+      set('v-tag','Caixa conciliado'); set('v-big','R$ 0,00');
+      sub.innerHTML = 'Sistema e contado batem ao centavo em todas as formas. <b>Pronto para fechar.</b>';
+    } else if(Math.abs(dc) <= TOL*100){
+      v.classList.add('ok');
+      set('v-tag', dc<0 ? 'Falta no caixa' : 'Sobra no caixa');
+      set('v-big', (dc<0?'Falta ':'Sobra ')+money(Math.abs(d)));
+      sub.innerHTML = 'Diferença só no <b>dinheiro</b> — <b>dentro da tolerância de '+money(TOL)+'</b>. Pode fechar sem justificativa.';
+    } else if(dc<0){
+      v.classList.add('bad');
+      set('v-tag','Falta no caixa'); set('v-big','Falta '+money(Math.abs(d)));
+      sub.innerHTML = '<b>Acima da tolerância de '+money(TOL)+'</b> — justificativa obrigatória para fechar o turno.';
+    } else {
+      v.classList.add('sobra');
+      set('v-tag','Sobra no caixa'); set('v-big','Sobra '+money(Math.abs(d)));
+      sub.innerHTML = '<b>Acima da tolerância de '+money(TOL)+'</b> — confira a contagem e justifique para fechar.';
+    }
+    set('v-exp', money(sysTotal())); set('v-rec', money(counted()));
+
+    // justificativa condicional
+    const jbox = document.getElementById('justify');
+    jbox.classList.toggle('show', needJustify());
+    document.getElementById('justify-title').textContent =
+      (dc<0?'Falta':'Sobra')+' de '+money(Math.abs(d))+' acima da tolerância de '+money(TOL)+' — justificativa obrigatória';
+
+    // nota da conciliação
+    document.getElementById('recon-note').textContent = dc===0
+      ? 'As 5 formas fecham exatas. Caixa conciliado — pode fechar o turno.'
+      : needJustify()
+        ? '4 de 5 formas fecham exatas. A diferença no dinheiro passou da tolerância: recontar a gaveta ou justificar.'
+        : '4 de 5 formas fecham exatas. A diferença no dinheiro está dentro da tolerância de '+money(TOL)+'.';
+
+    // recap
+    const diffEl = document.getElementById('rc-diff');
+    diffEl.innerHTML = dc===0
+      ? '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Conciliado</span>'
+      : Math.abs(dc)<=TOL*100
+        ? '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'+(dc<0?'Falta ':'Sobra ')+money(Math.abs(d))+' · na tolerância</span>'
+        : '<span class="pill '+(dc<0?'bad':'warn')+'">'+(dc<0?'Falta ':'Sobra ')+money(Math.abs(d))+' · justificada</span>';
+    const cl = document.getElementById('rc-cash-line');
+    if(dc===0){
+      cl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Dinheiro contado às cegas: exato';
+      cl.style.color = 'var(--ink-2)';
+    } else if(Math.abs(dc)<=TOL*100){
+      cl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Dinheiro contado às cegas: '+(dc<0?'falta ':'sobra ')+money(Math.abs(d))+' — dentro da tolerância de '+money(TOL);
+      cl.style.color = 'var(--ink-2)';
+    } else {
+      cl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--bad)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>'+(dc<0?'Falta ':'Sobra ')+money(Math.abs(d))+' no dinheiro — acima da tolerância, exige justificativa';
+      cl.style.color = 'var(--bad)';
+    }
+
+    if(rerender) renderRecon(); else patchCashRow();
+    updateNext();
+  }
+  function set(id,txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
+
+  // ---- Steps
+  const steps  = [...document.querySelectorAll('.step')];
+  const panels = [...document.querySelectorAll('.panel')];
+  const notes = [
+    'Passo 1 de 3 · o PDV consolida tudo, você só confere.',
+    'Passo 2 de 3 · conte o dinheiro às cegas; o resto conciliou sozinho.',
+    'Passo 3 de 3 · revise o resumo e feche o turno.',
+  ];
+  function updateNext(){
+    const next = document.getElementById('btn-next');
+    if(state.step===2){
+      next.textContent='Fechar turno'; next.className='btn close';
+      next.disabled = needJustify() && !justified();
+      document.getElementById('foot-note').textContent = (needJustify() && !justified())
+        ? 'Diferença acima da tolerância — preencha a justificativa no passo 2 para liberar o fechamento.'
+        : notes[2];
+    } else {
+      next.textContent='Próximo'; next.className='btn primary'; next.disabled=false;
+      document.getElementById('foot-note').textContent = notes[state.step];
+    }
+  }
+  function go(n){
+    state.step = n;
+    steps.forEach((s,i)=>{ s.setAttribute('aria-current', i===n?'true':'false'); s.classList.toggle('done', i<n); });
+    panels.forEach((p,i)=> i===n ? p.setAttribute('data-active','') : p.removeAttribute('data-active'));
+    document.getElementById('btn-back').disabled = n===0;
+    updateNext();
+  }
+  steps.forEach(s=> s.addEventListener('click',()=>go(+s.dataset.step)));
+  document.getElementById('btn-back').addEventListener('click',()=>go(Math.max(0,state.step-1)));
+  document.getElementById('btn-next').addEventListener('click',()=>{
+    if(state.step<2) go(state.step+1);
+    else finish();
+  });
+  document.getElementById('justify-text').addEventListener('input', updateNext);
+
+  function finish(){
+    if(needJustify() && !justified()) return;
+    const dc = diffCents(), d = dc/100;
+    document.getElementById('done-pill').innerHTML = dc===0
+      ? '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Conciliado</span>'
+      : Math.abs(dc)<=500
+        ? '<span class="pill ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'+(dc<0?'Falta ':'Sobra ')+money(Math.abs(d))+' · na tolerância</span>'
+        : '<span class="pill '+(dc<0?'bad':'warn')+'">'+(dc<0?'Falta ':'Sobra ')+money(Math.abs(d))+' · justificada</span>';
+    panels.forEach(p=>p.removeAttribute('data-active'));
+    document.getElementById('done').classList.add('show');
+    document.querySelector('.stepper').style.opacity='.5';
+    document.getElementById('foot').style.display='none';
+  }
+
+  renderRecon(); refresh(); go(0);
+})();
+</script>

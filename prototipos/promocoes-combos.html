@@ -1,0 +1,503 @@
+<meta charset="utf-8">
+<title>Helix Store — Promoções &amp; combos</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA;
+    --bad:#C0392B; --bad-tint:#F8E6E3; --bad-line:#EEC4BD;
+    --warn:#B7791F; --warn-tint:#F6EEDC; --warn-line:#E6D4A8;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 16px 40px -18px rgba(22,26,36,.22);
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:26px 20px 54px}
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+  .app{max-width:1220px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:15px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcfe)}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; gap:6px}
+  .brand .wm b .store{color:var(--brand)}
+  .brand .wm span{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; line-height:1.3}
+  .whoami{display:flex; align-items:center; gap:9px}
+  .whoami .av{width:30px; height:30px; border-radius:50%; background:var(--brand); color:#fff; display:grid; place-items:center; font-size:12px; font-weight:700}
+  .whoami .nm b{font-size:12.5px; font-weight:600; display:block; line-height:1.2}
+  .whoami .nm span{font-size:10.5px; color:var(--faint)}
+
+  .shell{display:grid; grid-template-columns:225px 1fr}
+  @media(max-width:840px){ .shell{grid-template-columns:1fr} .side{display:none} }
+  .side{border-right:1px solid var(--line); padding:16px 12px; background:var(--surface-2)}
+  .side .grp{font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:12px 12px 6px}
+  .nav{display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:9px; border:0; background:transparent; width:100%; cursor:pointer; font-family:inherit; font-size:13.5px; color:var(--ink-2); font-weight:500; text-align:left}
+  .nav svg{width:17px; height:17px; flex:none; color:var(--muted); stroke-width:1.7}
+  .nav:hover{background:#e7ebf5}
+  .nav[aria-current="true"]{background:var(--brand); color:#fff; font-weight:600}
+  .nav[aria-current="true"] svg{color:#fff}
+  .nav:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
+
+  .main{padding:22px 24px 30px; min-width:0}
+  .phead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap}
+  .phead h1{margin:0; font-size:21px; font-weight:660; letter-spacing:-.02em}
+  .phead .crumb{font-size:11.5px; color:var(--faint); font-weight:600; text-transform:uppercase; margin-bottom:3px}
+  .seg{display:flex; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:3px}
+  .seg button{border:0; background:transparent; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); padding:6px 13px; border-radius:6px; cursor:pointer}
+  .seg button.on{background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+  .view{display:none} .view[data-on]{display:block; animation:rise .24s ease}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){ .view[data-on]{animation:none} }
+
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px}
+  @media(max-width:900px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  .kpi{border:1px solid var(--line); border-radius:13px; padding:13px 15px; background:#fff}
+  .kpi .k{font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .kpi .v{font-size:23px; font-weight:680; letter-spacing:-.02em; margin-top:4px; line-height:1.05}
+  .kpi .v small{font-size:12px; color:var(--muted); font-weight:600}
+  .kpi .s{font-size:11px; color:var(--muted); margin-top:3px}
+  .kpi .s b{color:var(--ok); font-weight:700}
+
+  .card{border:1px solid var(--line); border-radius:14px; background:#fff; overflow:hidden; margin-bottom:14px}
+  .card .ch{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px 10px}
+  .card .ch h2{margin:0; font-size:14.5px; font-weight:640}
+  .card .ch .sum{font-size:11.5px; color:var(--faint)}
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap}
+  .pill.ok{color:var(--ok); background:var(--ok-tint)}
+  .pill.warn{color:var(--warn); background:var(--warn-tint)}
+  .pill.bad{color:var(--bad); background:var(--bad-tint)}
+  .pill.off{color:var(--muted); background:var(--line-2)}
+  .pill .pip{width:6px; height:6px; border-radius:50%; background:currentColor}
+
+  .mech{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:6px; white-space:nowrap}
+  .mech.lp{color:var(--brand-ink); background:var(--brand-tint)}
+  .mech.combo{color:#5B3FD4; background:#EEE9FD}
+  .mech.pct{color:var(--warn); background:var(--warn-tint)}
+  .mech.auto{color:var(--ok); background:var(--ok-tint)}
+
+  .regs{display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line-2)}
+  @media(max-width:900px){ .regs{grid-template-columns:1fr} }
+  .reg{padding:12px 14px; border-right:1px solid var(--line-2)}
+  .reg:last-child{border-right:0}
+  .reg .rn{font-size:11px; font-weight:700; color:var(--ink-2)}
+  .reg .rv{font-size:17px; font-weight:680; font-variant-numeric:tabular-nums; margin-top:2px}
+  .reg .rv b{color:var(--ok)}
+  .reg .rs{font-size:10.5px; color:var(--faint); font-variant-numeric:tabular-nums}
+
+  .stbl{width:100%; border-collapse:collapse; font-size:13px}
+  .stbl th{text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:6px 16px; border-bottom:1px solid var(--line)}
+  .stbl th.r,.stbl td.r{text-align:right}
+  .stbl td{padding:10px 16px; border-bottom:1px solid var(--line-2); vertical-align:middle}
+  .stbl tbody tr:last-child td{border-bottom:0}
+  .stbl tr:hover td{background:var(--surface-2)}
+  .stbl b{font-weight:600}
+  .stbl small{color:var(--faint); font-size:11px; display:block}
+  .stbl .cod{font-size:12px; font-weight:700; color:var(--brand-ink); white-space:nowrap}
+
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .chip{font-family:inherit; font-size:11px; font-weight:650; padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer}
+  .chip:hover{border-color:var(--brand)}
+  .chip.on{background:var(--brand); border-color:var(--brand); color:#fff}
+
+  /* editor */
+  .frm{display:grid; grid-template-columns:1fr 1fr; gap:13px 14px; padding:4px 16px 16px}
+  @media(max-width:900px){ .frm{grid-template-columns:1fr} }
+  .fld{display:flex; flex-direction:column; gap:5px; min-width:0}
+  .fld.full{grid-column:1/-1}
+  .fld label{font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .fld input,.fld select{font-family:inherit; font-size:13.5px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); width:100%}
+  .fld input:focus,.fld select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+  .fld .hint{font-size:11px; color:var(--faint)}
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .preview{grid-column:1/-1; background:var(--brand-tint); border:1px solid #d5ddf7; border-radius:12px; padding:13px 15px; font-size:13px; color:var(--brand-ink)}
+  .preview b{font-weight:700}
+  .preview .tag{font-size:10px; letter-spacing:.08em; text-transform:uppercase; font-weight:800; display:block; margin-bottom:3px; opacity:.75}
+  .btnrow{grid-column:1/-1; display:flex; gap:8px; justify-content:flex-end}
+  .btn{font-family:inherit; font-size:12.5px; font-weight:650; padding:8px 16px; border-radius:9px; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink-2)}
+  .btn.primary{background:var(--brand); border-color:var(--brand); color:#fff}
+  .btn.primary:hover{background:var(--brand-ink)}
+
+  /* simulador */
+  .grid2{display:grid; grid-template-columns:1fr 1.2fr; gap:14px}
+  @media(max-width:900px){ .grid2{grid-template-columns:1fr} }
+  .pbtn{display:flex; align-items:center; gap:11px; width:100%; padding:10px 16px; border:0; border-bottom:1px solid var(--line-2); background:#fff; cursor:pointer; font-family:inherit; text-align:left}
+  .pbtn:last-child{border-bottom:0}
+  .pbtn:hover{background:var(--surface-2)}
+  .pbtn .dot{width:8px; height:8px; border-radius:50%; flex:none}
+  .pbtn .nm{flex:1; min-width:0}
+  .pbtn .nm b{font-size:13px; font-weight:600; display:block; line-height:1.3}
+  .pbtn .nm span{font-size:11px; color:var(--faint)}
+  .pbtn .pr{font-size:13px; font-weight:650; white-space:nowrap}
+  .pbtn .plus{width:22px; height:22px; border-radius:50%; background:var(--brand-tint); color:var(--brand-ink); display:grid; place-items:center; font-weight:800; font-size:14px; flex:none}
+  .ctxbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid var(--line-2); background:var(--surface-2); font-size:12px; color:var(--muted); font-weight:600}
+  .ctxbar select{font-family:inherit; font-size:12.5px; font-weight:650; padding:5px 9px; border:1px solid var(--line); border-radius:8px; background:#fff}
+  .cline{display:flex; align-items:center; gap:10px; padding:9px 16px; border-bottom:1px solid var(--line-2); font-size:13px}
+  .cline .nm{flex:1; min-width:0}
+  .cline .nm b{font-weight:600}
+  .cline .nm small{color:var(--faint); font-size:11px; display:block}
+  .qty{display:flex; align-items:center; gap:6px}
+  .qty button{width:22px; height:22px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; font-family:inherit; font-weight:700; color:var(--ink-2); line-height:1}
+  .qty button:hover{border-color:var(--brand); color:var(--brand-ink)}
+  .qty b{min-width:20px; text-align:center; font-size:13px}
+  .dline{display:flex; align-items:center; gap:10px; padding:8px 16px; border-bottom:1px solid var(--line-2); font-size:12.5px; color:var(--ok); background:var(--ok-tint)}
+  .dline .cod{font-size:10.5px; font-weight:800; letter-spacing:.03em; background:#fff; border-radius:6px; padding:2px 7px; white-space:nowrap}
+  .dline .tx{flex:1}
+  .dline .vv{font-weight:700; white-space:nowrap}
+  .iline{padding:8px 16px; border-bottom:1px solid var(--line-2); font-size:12px; color:var(--warn); background:var(--warn-tint); font-weight:600}
+  .totals{padding:13px 16px; background:var(--surface-2); border-top:1px solid var(--line)}
+  .trow{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); padding:2px 0}
+  .trow.big{font-size:18px; font-weight:700; color:var(--ink); padding-top:6px}
+  .trow.big .eco{font-size:11.5px; color:var(--ok); font-weight:700; display:block; text-align:right}
+  .strike{text-decoration:line-through; color:var(--faint)}
+  .empty{padding:26px 16px; text-align:center; font-size:12.5px; color:var(--faint)}
+
+  .caption{max-width:1220px; margin:14px auto 0; font-size:11.5px; color:var(--faint); text-align:center}
+  .caption b{color:var(--muted); font-weight:600}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/></linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Promoções &amp; combos · Grupo Aurora</span></div>
+    </div>
+    <div class="whoami"><div class="av">AB</div><div class="nm"><b>Abílio S.</b><span>Administrador · Grupo Aurora</span></div></div>
+  </div>
+
+  <div class="shell">
+    <nav class="side">
+      <div class="grp">Rede</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Visão geral</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21V7l6-4 6 4v14"/><path d="M15 11h3a2 2 0 012 2v6a2 2 0 01-2 2"/><path d="M7 9h4M7 13h4"/></svg>Lojas</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Fechamentos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Relatórios</button>
+      <div class="grp">Operação</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 18v3h10v-3M8 10h4"/></svg>PDV</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Estoque &amp; validade</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 8h13v8H1z"/><path d="M14 11h4l3 3v2h-7z"/><circle cx="6" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>Reposição</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Contagem</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l3-8h4l3 8M13 9l2-4h3"/></svg>Delivery</button>
+      <div class="grp">Retaguarda</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Produtos</button>
+      <button class="nav" aria-current="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.6 13.4L11 3.8A2 2 0 009.6 3H5a2 2 0 00-2 2v4.6c0 .5.2 1 .6 1.4l9.6 9.6a2 2 0 002.8 0l4.6-4.6a2 2 0 000-2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>Promoções &amp; combos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18v12H3z"/><path d="M3 10h18"/></svg>Financeiro</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.2a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1h.2a2 2 0 110 4h-.2a1.7 1.7 0 00-1.5 1z"/></svg>Configurações</button>
+    </nav>
+
+    <main class="main">
+      <div class="phead">
+        <div><div class="crumb">Grupo Aurora · 24 lojas · sexta, 10 jul 2026</div><h1>Promoções &amp; combos</h1></div>
+        <div class="seg" id="seg">
+          <button class="on" data-view="regras">Regras</button>
+          <button data-view="editor">Editor · PRM-012</button>
+          <button data-view="sim">Simulador de cesta</button>
+        </div>
+      </div>
+
+      <!-- REGRAS -->
+      <section class="view" data-view="regras" data-on>
+        <div class="kpis">
+          <div class="kpi"><div class="k">Regras ativas</div><div class="v num">4</div><div class="s">2 encerradas em julho</div></div>
+          <div class="kpi"><div class="k">Margem cedida no mês</div><div class="v num">R$ 12,4 mil</div><div class="s">2,6% da venda promovida</div></div>
+          <div class="kpi"><div class="k">Uplift médio</div><div class="v num" style="color:var(--ok)">+21%</div><div class="s">unidades das promovidas vs 4 semanas antes</div></div>
+          <div class="kpi"><div class="k">Regras automáticas</div><div class="v num">1</div><div class="s">PRM-023 · radar de validade</div></div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><h2>Regras comerciais</h2><span class="sum">aplicação automática no PDV das 24 lojas</span></div>
+          <div style="overflow-x:auto">
+          <table class="stbl">
+            <thead><tr><th>Código</th><th>Nome</th><th>Mecânica</th><th>Escopo</th><th>Vigência</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="cod">PRM-012</td>
+                <td><b>Leve 3 Pague 2 — Skol Lata 350ml</b><small>PRD-00655 · desconto sai como linha no cupom</small></td>
+                <td><span class="mech lp">Leve-pague</span></td>
+                <td>Rede · 24 lojas</td>
+                <td class="num">01/07 – 31/07</td>
+                <td><span class="pill ok"><span class="pip"></span>Ativa</span></td>
+              </tr>
+              <tr>
+                <td class="cod">PRM-007</td>
+                <td><b>Combo Churrasco — 6 Heineken + Carvão 3kg</b><small>PRD-00230 + PRD-01544 · avulso sairia R$ 72,30</small></td>
+                <td><span class="mech combo">Combo preço fixo · R$ 59,90</span></td>
+                <td>Rede · 24 lojas</td>
+                <td class="num">01/07 – 31/08</td>
+                <td><span class="pill ok"><span class="pip"></span>Ativa</span></td>
+              </tr>
+              <tr>
+                <td class="cod">PRM-019</td>
+                <td><b>Happy hour cafeteria</b><small>categoria Serviço · food service</small></td>
+                <td><span class="mech pct">−15% · 17h–19h · seg–sex</span></td>
+                <td>Praça · Sorocaba (9 lojas)</td>
+                <td class="num">01/06 – contínua</td>
+                <td><span class="pill ok"><span class="pip"></span>Ativa</span></td>
+              </tr>
+              <tr>
+                <td class="cod">PRM-023</td>
+                <td><b>Validade curta — perecíveis</b><small>gerada pelo radar de validade — sem cadastro manual</small></td>
+                <td><span class="mech auto">Validade curta AUTO · −30% ≤ 2 dias</span></td>
+                <td>Rede · 24 lojas</td>
+                <td class="num">contínua</td>
+                <td><span class="pill ok"><span class="pip"></span>Ativa</span></td>
+              </tr>
+              <tr>
+                <td class="cod">PRM-015</td>
+                <td><b>Semana do Pão de Queijo</b><small>PRD-01203 · pesável — balança</small></td>
+                <td><span class="mech pct">−10% · dia todo</span></td>
+                <td>Praça · Campinas (8 lojas)</td>
+                <td class="num">22/06 – 28/06</td>
+                <td><span class="pill off"><span class="pip"></span>Encerrada</span></td>
+              </tr>
+              <tr>
+                <td class="cod">PRM-003</td>
+                <td><b>Dose Dupla Red Bull — 2 por R$ 19,90</b><small>PRD-00087 · avulso sairia R$ 25,80</small></td>
+                <td><span class="mech combo">Combo preço fixo · R$ 19,90</span></td>
+                <td>Loja · Aurora Guarujá</td>
+                <td class="num">01/06 – 30/06</td>
+                <td><span class="pill off"><span class="pip"></span>Encerrada</span></td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><h2>PRM-012 — desempenho</h2><span class="pill ok"><span class="pip"></span>melhor uplift do mês</span></div>
+          <div class="regs">
+            <div class="reg"><div class="rn">Unidades vendidas</div><div class="rv num"><b>+34%</b></div><div class="rs">vs 4 semanas antes da regra</div></div>
+            <div class="reg"><div class="rn">Margem cedida</div><div class="rv num">R$ 3,1 mil</div><div class="rs">no mês · dentro do previsto</div></div>
+            <div class="reg"><div class="rn">Ticket dos cupons com a regra</div><div class="rv num">R$ 31,40</div><div class="rs">vs R$ 24,80 do ticket médio da rede</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EDITOR -->
+      <section class="view" data-view="editor">
+        <div class="card">
+          <div class="ch">
+            <h2><span class="stbl cod" style="font-size:13px">PRM-012</span> · Leve 3 Pague 2 — Skol Lata 350ml</h2>
+            <span class="pill ok"><span class="pip"></span>Ativa · aplicada em 24 lojas</span>
+          </div>
+          <div class="frm">
+            <div class="fld">
+              <label for="f-mec">Mecânica</label>
+              <select id="f-mec">
+                <option selected>Leve X Pague Y</option>
+                <option>Combo preço fixo</option>
+                <option>% de desconto por janela</option>
+                <option>Validade curta (automática)</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Quantidades</label>
+              <div class="duo">
+                <input value="Leve 3" aria-label="Leve">
+                <input value="Pague 2" aria-label="Pague">
+              </div>
+            </div>
+            <div class="fld full">
+              <label for="f-prd">Produto</label>
+              <input id="f-prd" value="PRD-00655 — Skol Lata 350ml · EAN 7891149010806 · R$ 4,99">
+              <span class="hint">busca por código, EAN ou nome — a regra referencia o produto de rede, não o preço da loja</span>
+            </div>
+            <div class="fld">
+              <label for="f-esc">Escopo</label>
+              <select id="f-esc">
+                <option selected>Toda a rede · 24 lojas</option>
+                <option>Praça · Sorocaba (9 lojas)</option>
+                <option>Praça · Campinas (8 lojas)</option>
+                <option>Praça · Litoral (7 lojas)</option>
+                <option>Loja específica…</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label for="f-exc">Excluir lojas (opcional)</label>
+              <input id="f-exc" placeholder="ex.: LOJ-014 Aurora Ubatuba">
+              <span class="hint">exceção por loja — mesma lógica do preço de rede</span>
+            </div>
+            <div class="fld">
+              <label>Vigência</label>
+              <div class="duo">
+                <input value="01/07/2026" aria-label="Início">
+                <input value="31/07/2026" aria-label="Fim">
+              </div>
+            </div>
+            <div class="fld">
+              <label for="f-lim">Limite por cupom</label>
+              <select id="f-lim">
+                <option>Sem limite</option>
+                <option>1 aplicação</option>
+                <option selected>2 aplicações</option>
+                <option>3 aplicações</option>
+              </select>
+            </div>
+            <div class="preview">
+              <span class="tag">Preview no cupom</span>
+              Cliente leva 3, paga 2 — o desconto sai como <b>linha no cupom (−R$ 4,99)</b>.
+              Com o limite de 2 aplicações, o máximo por cupom é <b>−R$ 9,98</b> (6 latas). A regra aplica sozinha em qualquer PDV do escopo — o operador não digita nada.
+            </div>
+            <div class="btnrow">
+              <button class="btn">Encerrar promoção</button>
+              <button class="btn primary">Salvar regra</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIMULADOR -->
+      <section class="view" data-view="sim">
+        <div class="chips">
+          <span style="font-size:11px; font-weight:700; color:var(--faint); align-self:center; text-transform:uppercase; letter-spacing:.06em">Cenários rápidos:</span>
+          <button class="chip" data-cen="skol">3 Skol → leve-pague</button>
+          <button class="chip" data-cen="churrasco">6 Heineken + carvão → combo</button>
+          <button class="chip" data-cen="cafe">Café às 18h → happy hour</button>
+          <button class="chip" data-cen="limpar">Limpar cesta</button>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="ch"><h2>Produtos</h2><span class="sum">toque para adicionar à cesta</span></div>
+            <div id="plist"></div>
+          </div>
+          <div class="card">
+            <div class="ch"><h2>Cesta simulada</h2><span class="sum">regras vigentes aplicadas de verdade</span></div>
+            <div class="ctxbar">
+              Loja: <b style="color:var(--ink-2)">LOJ-001 Aurora Centro (Sorocaba)</b> · sexta ·
+              <label for="hora">Hora simulada</label>
+              <select id="hora">
+                <option value="10">10:00</option>
+                <option value="14">14:00</option>
+                <option value="17">17:00</option>
+                <option value="18" selected>18:00</option>
+                <option value="19">19:00</option>
+                <option value="21">21:00</option>
+              </select>
+            </div>
+            <div id="cesta"></div>
+            <div class="totals" id="totais"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<p class="caption">Protótipo Helix Store · Motor comercial: as regras são cadastradas <b>uma vez na retaguarda</b> e aplicadas automaticamente no PDV de toda a rede — inclusive a <b>promoção de validade curta</b>, que o radar gera sozinho, sem cadastro manual.</p>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const brl=v=>'R$ '+v.toFixed(2).replace('.',',');
+
+  /* ---- tabs ---- */
+  const segBtns=[...$('seg').querySelectorAll('button')], views=[...document.querySelectorAll('.view')];
+  segBtns.forEach(b=>b.addEventListener('click',()=>{
+    segBtns.forEach(x=>x.classList.toggle('on',x===b));
+    views.forEach(v=> v.dataset.view===b.dataset.view ? v.setAttribute('data-on','') : v.removeAttribute('data-on'));
+  }));
+
+  /* ---- simulador ---- */
+  const PROD={
+    'PRD-00655':{nm:'Skol Lata 350ml',        det:'Bebidas · curva A',              pr:4.99,  cat:'--bebidas'},
+    'PRD-00230':{nm:'Heineken Long Neck 330ml',det:'Bebidas · curva A',             pr:8.90,  cat:'--bebidas'},
+    'PRD-01544':{nm:'Carvão 3kg',             det:'Alimentos · curva C',            pr:18.90, cat:'--alimentos'},
+    'PRD-00990':{nm:'Café Espresso',          det:'Serviço · cafeteria',            pr:6.00,  cat:'--servico'},
+    'PRD-00412':{nm:'Coca-Cola Lata 350ml',   det:'Bebidas · curva A',              pr:6.50,  cat:'--bebidas'},
+    'PRD-00918':{nm:'Sanduíche Natural Frango',det:'Perecível · vence em 2 dias',   pr:16.90, cat:'--perecivel'},
+    'PRD-00777':{nm:'Água Mineral 500ml',     det:'Bebidas · sem promoção vigente', pr:3.50,  cat:'--bebidas'}
+  };
+  let cart={};
+
+  $('plist').innerHTML=Object.entries(PROD).map(([c,p])=>`
+    <button class="pbtn" data-add="${c}">
+      <span class="dot" style="background:var(${p.cat})"></span>
+      <span class="nm"><b>${p.nm}</b><span>${c} · ${p.det}</span></span>
+      <span class="pr num">${brl(p.pr)}</span>
+      <span class="plus">+</span>
+    </button>`).join('');
+  $('plist').querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{ add(b.dataset.add,1); }));
+
+  function add(c,d){ cart[c]=(cart[c]||0)+d; if(cart[c]<=0) delete cart[c]; render(); }
+
+  const CEN={
+    skol:{'PRD-00655':3},
+    churrasco:{'PRD-00230':6,'PRD-01544':1},
+    cafe:{'PRD-00990':1},
+    limpar:{}
+  };
+  document.querySelectorAll('[data-cen]').forEach(b=>b.addEventListener('click',()=>{
+    cart=Object.assign({},CEN[b.dataset.cen]);
+    if(b.dataset.cen==='cafe') $('hora').value='18';
+    render();
+  }));
+  $('hora').addEventListener('change',render);
+
+  function calc(){
+    const promos=[], notas=[];
+    /* PRM-012 — leve 3 pague 2 Skol, limite 2 aplicações/cupom */
+    const skol=cart['PRD-00655']||0;
+    const apl=Math.min(Math.floor(skol/3),2);
+    if(apl>0){
+      promos.push({cod:'PRM-012',tx:`Leve 3 Pague 2 · Skol — ${apl}× aplicada`,v:apl*4.99});
+      if(Math.floor(skol/3)>2) notas.push('PRM-012 limitada a 2 aplicações por cupom — o excedente sai a preço cheio.');
+    }
+    /* PRM-007 — combo churrasco: 6 Heineken + 1 Carvão = R$ 59,90 (avulso R$ 72,30) */
+    const hei=cart['PRD-00230']||0, car=cart['PRD-01544']||0;
+    const combos=Math.min(Math.floor(hei/6),car);
+    if(combos>0) promos.push({cod:'PRM-007',tx:`Combo Churrasco — fecha em R$ 59,90 · ${combos}× aplicado`,v:combos*(6*8.90+18.90-59.90)});
+    /* PRM-019 — happy hour −15% cafeteria 17–19h seg–sex (hoje é sexta) */
+    const cafe=cart['PRD-00990']||0, h=+$('hora').value;
+    if(cafe>0){
+      if(h>=17&&h<19) promos.push({cod:'PRM-019',tx:`Happy hour −15% · cafeteria (${h}h, seg–sex)`,v:cafe*6.00*0.15});
+      else notas.push(`PRM-019 não aplicada — ${h}h está fora da janela 17h–19h.`);
+    }
+    /* PRM-023 — validade curta: −30% automático em perecível a ≤ 2 dias */
+    const sand=cart['PRD-00918']||0;
+    if(sand>0) promos.push({cod:'PRM-023',tx:'Validade curta −30% · vence em 2 dias (automática, radar)',v:sand*16.90*0.30});
+    return {promos,notas};
+  }
+
+  function render(){
+    const codes=Object.keys(cart);
+    let gross=0;
+    const linhas=codes.map(c=>{
+      const p=PROD[c], q=cart[c]; gross+=q*p.pr;
+      return `<div class="cline">
+        <span class="nm"><b>${p.nm}</b><small>${c} · ${brl(p.pr)} un</small></span>
+        <span class="qty"><button data-q="${c}" data-d="-1" aria-label="menos">−</button><b class="num">${q}</b><button data-q="${c}" data-d="1" aria-label="mais">+</button></span>
+        <b class="num" style="min-width:74px;text-align:right">${brl(q*p.pr)}</b>
+      </div>`;
+    }).join('');
+
+    const {promos,notas}=calc();
+    const desc=promos.reduce((s,p)=>s+p.v,0);
+    const dlin=promos.map(p=>`<div class="dline"><span class="cod">${p.cod}</span><span class="tx">${p.tx}</span><span class="vv num">− ${brl(p.v)}</span></div>`).join('');
+    const nlin=notas.map(n=>`<div class="iline">${n}</div>`).join('');
+
+    $('cesta').innerHTML= codes.length
+      ? linhas+dlin+nlin
+      : '<div class="empty">Cesta vazia — toque nos produtos ao lado ou use um cenário rápido.</div>';
+
+    $('totais').innerHTML= codes.length ? `
+      <div class="trow"><span>Total sem promoção</span><span class="num ${desc>0?'strike':''}">${brl(gross)}</span></div>
+      <div class="trow"><span>Descontos aplicados (${promos.length} ${promos.length===1?'regra':'regras'})</span><span class="num" style="color:var(--ok);font-weight:700">− ${brl(desc)}</span></div>
+      <div class="trow big"><span>Total com promoção</span><span class="num">${brl(gross-desc)}${desc>0?`<span class="eco">cliente economiza ${( desc/gross*100).toFixed(0)}%</span>`:''}</span></div>`
+      : '<div class="trow"><span>Total</span><span class="num">R$ 0,00</span></div>';
+
+    $('cesta').querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>add(b.dataset.q,+b.dataset.d)));
+  }
+
+  render();
+})();
+</script>

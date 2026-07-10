@@ -1,0 +1,448 @@
+<meta charset="utf-8">
+<title>Helix Store — Relatórios & Análises</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA; --warn:#B7791F; --warn-tint:#F6EEDC; --bad:#C0392B;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 16px 40px -18px rgba(22,26,36,.22);
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:26px 20px 50px}
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+  .app{max-width:1220px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:15px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcfe)}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; gap:6px}
+  .brand .wm b .store{color:var(--brand)}
+  .brand .wm span{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; line-height:1.3}
+  .who{display:flex; align-items:center; gap:10px; text-align:right}
+  .who .txt .nm{font-size:12.5px; font-weight:650}
+  .who .txt .rl{font-size:11px; color:var(--muted)}
+  .who .av{width:34px; height:34px; border-radius:50%; background:var(--brand-tint); color:var(--brand-ink); font-weight:700; font-size:12px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line)}
+
+  .shell{display:grid; grid-template-columns:250px 1fr; min-height:640px}
+  @media(max-width:860px){ .shell{grid-template-columns:1fr} .side{display:none} }
+
+  .side{border-right:1px solid var(--line); background:var(--surface-2); padding:16px 10px}
+  .side .t{font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:0 12px 8px}
+  .cat{width:100%; display:flex; align-items:center; gap:9px; border:0; background:transparent; font-family:inherit; font-size:13px; color:var(--ink-2); font-weight:500; padding:8px 12px; border-radius:9px; cursor:pointer; text-align:left}
+  .cat:hover{background:#e7ebf5}
+  .cat.on{background:var(--brand); color:#fff; font-weight:600}
+  .cat .n{margin-left:auto; font-size:10.5px; color:var(--faint); font-weight:700; font-variant-numeric:tabular-nums}
+  .cat.on .n{color:rgba(255,255,255,.75)}
+  .cat:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
+
+  .main{padding:20px 24px 28px; min-width:0}
+  .cover{font-size:12px; color:var(--muted); margin-bottom:12px}
+  .cover b{color:var(--ok); font-weight:700}
+  .search{position:relative; margin-bottom:12px; max-width:520px}
+  .search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--faint)}
+  .search input{width:100%; font-family:inherit; font-size:14px; padding:11px 13px 11px 38px; border:1px solid var(--line); border-radius:11px; background:#fff}
+  .search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+
+  .saved{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:16px; align-items:center}
+  .saved .lbl{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:700; margin-right:2px}
+  .sv{font-family:inherit; font-size:11.5px; font-weight:650; padding:5px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--brand-ink); cursor:pointer}
+  .sv:hover{border-color:var(--brand); background:var(--brand-tint)}
+  .sv .by{color:var(--faint); font-weight:500}
+
+  .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+  @media(max-width:760px){ .grid{grid-template-columns:1fr} }
+  .rep{border:1px solid var(--line); border-radius:13px; background:#fff; padding:13px 15px; cursor:pointer; text-align:left; font-family:inherit; transition:.13s; display:flex; flex-direction:column; gap:5px}
+  .rep:hover{border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint); transform:translateY(-1px)}
+  .rep:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .rep b{font-size:13.5px; font-weight:650; line-height:1.35}
+  .rep .d{font-size:11.5px; color:var(--muted); line-height:1.45}
+  .rep .foot{display:flex; align-items:center; gap:8px; margin-top:3px}
+  .tagc{font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--faint)}
+  .cover-pill{margin-left:auto; font-size:10px; font-weight:700; color:var(--ok); background:var(--ok-tint); padding:2px 8px; border-radius:999px; white-space:nowrap}
+
+  /* explorador */
+  .exp{display:none}
+  .exp.on{display:block; animation:rise .22s ease}
+  .cat-list.off,.search.off,.saved.off,.grid.off,.cover.off{display:none}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){ .exp.on{animation:none} }
+  .back{font-family:inherit; border:0; background:none; color:var(--brand-ink); font-size:12.5px; font-weight:650; cursor:pointer; padding:0; margin-bottom:10px; display:inline-flex; align-items:center; gap:6px}
+  .back:hover{text-decoration:underline}
+  .exp h1{margin:0 0 3px; font-size:19px; font-weight:660; letter-spacing:-.02em}
+  .exp .sub{font-size:12px; color:var(--muted); margin:0 0 14px}
+  .exp .sub b{color:var(--ok)}
+
+  .fbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+  .fctl{display:flex; flex-direction:column; gap:4px}
+  .fctl label{font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .fctl select{font-family:inherit; font-size:12.5px; font-weight:600; padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); min-width:130px}
+  .fctl select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+
+  .dims{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; align-items:center}
+  .dims .lbl{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .dim{font-family:inherit; font-size:11.5px; font-weight:650; padding:6px 13px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer}
+  .dim.on{background:var(--brand); border-color:var(--brand); color:#fff}
+  .dim:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+  .card{border:1px solid var(--line); border-radius:13px; background:#fff; overflow:hidden; margin-bottom:12px}
+  .stbl{width:100%; border-collapse:collapse; font-size:13px}
+  .stbl th{text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:9px 16px; border-bottom:1px solid var(--line); background:var(--surface-2)}
+  .stbl th.r,.stbl td.r{text-align:right}
+  .stbl td{padding:10px 16px; border-bottom:1px solid var(--line-2)}
+  .stbl tbody tr:last-child td{border-bottom:0}
+  .stbl tfoot td{padding:11px 16px; font-weight:680; border-top:2px solid var(--line)}
+  .bar{display:inline-block; height:7px; border-radius:4px; background:var(--brand); opacity:.35; vertical-align:middle; margin-left:8px}
+  .cls{font-size:10px; font-weight:800; padding:2px 9px; border-radius:999px}
+  .cls.A{background:var(--ok-tint); color:var(--ok)}
+  .cls.B{background:var(--warn-tint); color:var(--warn)}
+  .cls.C{background:var(--surface-2); color:var(--faint)}
+  .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; vertical-align:baseline}
+  .agg td{color:var(--muted); font-style:normal}
+
+  /* mapa de calor */
+  .hmwrap{padding:16px; overflow-x:auto}
+  .hm{display:grid; grid-template-columns:44px repeat(24,minmax(24px,1fr)); gap:3px; min-width:740px}
+  .hm .hd{font-size:9px; color:var(--faint); font-weight:700; text-align:center; padding-bottom:2px}
+  .hm .dl{font-size:10.5px; color:var(--muted); font-weight:650; align-self:center}
+  .hm .c{height:26px; border-radius:5px}
+  .legend{display:flex; align-items:center; gap:9px; font-size:11px; color:var(--muted); padding:2px 16px 14px}
+  .legend .scale{width:130px; height:8px; border-radius:4px; background:linear-gradient(90deg, rgba(58,92,216,.06), rgba(58,92,216,1))}
+  .note{font-size:12px; color:var(--muted); margin:2px 2px 14px}
+  .note b{color:var(--ink-2)}
+
+  .acts{display:flex; gap:9px; flex-wrap:wrap}
+  .btn{font-family:inherit; font-size:12.5px; font-weight:650; padding:9px 16px; border-radius:10px; border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer}
+  .btn:hover{border-color:var(--brand); color:var(--brand-ink)}
+  .btn.pri{background:var(--brand); border-color:var(--brand); color:#fff}
+  .btn.pri:hover{background:var(--brand-ink)}
+  .btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--ink); color:#fff; font-size:13px; font-weight:600; padding:11px 18px; border-radius:11px; opacity:0; pointer-events:none; transition:.25s; z-index:9; max-width:90vw; text-align:center}
+  .toast.show{opacity:1; transform:translateX(-50%)}
+
+  .caption{max-width:1220px; margin:14px auto 0; font-size:11.5px; color:var(--faint); text-align:center}
+  .caption b{color:var(--muted); font-weight:600}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/></linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Relatórios · Grupo Aurora</span></div>
+    </div>
+    <div class="who">
+      <div class="txt"><div class="nm">Abílio S.</div><div class="rl">Administrador · sexta, 10 jul 2026</div></div>
+      <div class="av">AB</div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <nav class="side cat-list" id="side">
+      <div class="t">Domínios</div>
+      <div id="cats"></div>
+    </nav>
+
+    <main class="main">
+      <!-- catálogo -->
+      <div class="cover" id="cover">Catálogo do ERP anterior: 200+ relatórios fixos · <b id="cover-n"></b></div>
+      <div class="search" id="searchbox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="q" type="search" placeholder="Buscar análise… (ex.: curva ABC, quebra, ticket, ruptura)" aria-label="Buscar análise">
+      </div>
+      <div class="saved" id="saved"></div>
+      <div class="grid" id="grid"></div>
+
+      <!-- explorador -->
+      <div class="exp" id="exp"></div>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<p class="caption">Protótipo Helix Store · Relatórios. &nbsp;<b>Poucas análises exploráveis no lugar de centenas de relatórios fixos: mesmo dado, filtro e agrupamento livres — e qualquer variação vira visão salva com nome.</b></p>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const BRL=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+  const BRL2=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2});
+  const NL=new Intl.NumberFormat('pt-BR');
+  const PCT=x=>x.toFixed(1).replace('.',',')+'%';
+
+  const CATS=[
+    ['vendas','Vendas & ticket'],['margem','Margem & promoções'],
+    ['estoque','Quebra & ruptura'],['caixa','Caixa & pagamentos']
+  ];
+
+  // cada análise substitui N relatórios fixos do ERP anterior
+  const REPS=[
+    {c:'vendas', nm:'Curva ABC de produtos', d:'Participação na venda e na margem, classe A/B/C — por loja, praça ou categoria. É daqui que saem reposição e planograma.', fix:9, special:'abc', dims:['produto','categoria','loja'], dim:'produto'},
+    {c:'vendas', nm:'Ticket médio', d:'Por loja, hora do dia e dia da semana — com itens por cupom, contra a média da rede (R$ 24,80).', fix:6, dims:['loja','hora','dia','praca'], dim:'loja', kind:'venda'},
+    {c:'vendas', nm:'Vendas por hora — mapa de calor', d:'Dia da semana × hora. Onde a rede vende: picos de 07–09h e 17–20h; no Litoral o pico muda para a noite.', fix:8, special:'heat'},
+    {c:'vendas', nm:'Ranking de lojas', d:'As 24 lojas ordenadas por venda — com filtro de categoria: bebidas, alimentos, perecíveis, tabacaria ou food service.', fix:5, dims:['loja','praca'], dim:'loja', kind:'venda'},
+    {c:'margem', nm:'Margem por categoria', d:'Venda, margem R$ e margem % por categoria — perecível rende mais e quebra mais; o corte por loja mostra quem opera bem.', fix:7, dims:['categoria','loja','praca'], dim:'categoria', kind:'margem'},
+    {c:'margem', nm:'Promoções — uplift & margem cedida', d:'Cada PRM- com venda na promoção, uplift vs. baseline e quanto de margem foi cedida para gerar esse tráfego.', fix:4, dims:['promo','loja','categoria'], dim:'promo', kind:'promo'},
+    {c:'estoque', nm:'Quebra por motivo', d:'Validade, avaria, furto e consumo interno por loja — quebra do mês em 1,9% da venda contra meta de 1,5%.', fix:6, dims:['motivo','loja','categoria'], dim:'motivo', kind:'quebra'},
+    {c:'estoque', nm:'Ruptura & venda perdida', d:'Produtos curva A sem estoque × estimativa de venda perdida (Red Bull zerado em 3 lojas ≈ R$ 1.240/dia).', fix:5, dims:['produto','loja','praca'], dim:'produto', kind:'quebra'},
+    {c:'caixa', nm:'Formas de pagamento', d:'Valor, cupons e ticket por forma — PIX, cartões, dinheiro, vale e apps; cruze com loja e praça.', fix:7, dims:['forma','loja','praca'], dim:'forma', kind:'venda'},
+  ];
+  const covered=REPS.reduce((a,r)=>a+r.fix,0);
+  $('cover-n').textContent=`Helix Store: ${REPS.length} análises exploráveis cobrindo os ${covered} mais usados — e qualquer variação vira visão salva`;
+
+  const DIMS={produto:'Produto', categoria:'Categoria', loja:'Loja', praca:'Praça', hora:'Hora do dia', dia:'Dia da semana', forma:'Forma de pagamento', motivo:'Motivo', promo:'Promoção'};
+  const ROWS={
+    loja:['LOJ-001 · Aurora Centro (Sorocaba)','LOJ-010 · Aurora Campinas Norte','LOJ-018 · Aurora Santos','LOJ-014 · Aurora Jundiaí','LOJ-019 · Aurora Guarujá','LOJ-002 · Aurora Itu','LOJ-012 · Aurora Valinhos','LOJ-020 · Aurora Praia Grande','… mais 16 lojas'],
+    praca:['Sorocaba · 9 lojas','Campinas · 8 lojas','Litoral · 7 lojas'],
+    categoria:['Bebidas','Alimentos','Perecível','Tabacaria','Serviço · food service'],
+    produto:['PRD-00412 · Coca-Cola Lata 350ml','PRD-00666 · Cigarro Marlboro Red','PRD-00087 · Red Bull Energy 250ml','PRD-00655 · Skol Lata 350ml','PRD-00990 · Café Espresso','PRD-00777 · Água Mineral 500ml','… mais 1.240 produtos'],
+    forma:['Crédito','Débito','PIX','Dinheiro','Vale-refeição','Apps de delivery'],
+    hora:['06h–09h','09h–12h','12h–15h','15h–17h','17h–20h','20h–23h','23h–06h'],
+    dia:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
+    motivo:['Validade vencida','Avaria / manuseio','Furto identificado','Consumo interno','Erro de cadastro / balança'],
+    promo:['PRM-012 · Leve 3 Pague 2 Skol','PRM-007 · Combo Churrasco','PRM-019 · Happy hour cafeteria','PRM-023 · Validade curta −30%'],
+  };
+  const BASES={loja:520000, praca:4300000, categoria:2600000, produto:330000, forma:2150000, hora:1850000, dia:1850000, motivo:52000, promo:46000};
+  const QBASES={motivo:52000, loja:10800, categoria:52000, produto:8200, praca:86000};
+
+  const PRACAS={todas:{nm:'Toda a rede · 24 lojas',mult:1,seed:0}, soro:{nm:'Sorocaba · 9 lojas',mult:.38,seed:400}, camp:{nm:'Campinas · 8 lojas',mult:.34,seed:500}, lit:{nm:'Litoral · 7 lojas',mult:.28,seed:600}};
+  const CATT={
+    todas:{nm:'Todas as categorias', mult:1},
+    beb:{nm:'Bebidas', mult:.38, tot:5270000, n:214, tone:'--bebidas'},
+    ali:{nm:'Alimentos', mult:.22, tot:3050000, n:486, tone:'--alimentos'},
+    per:{nm:'Perecível', mult:.16, tot:2210000, n:173, tone:'--perecivel'},
+    tab:{nm:'Tabacaria', mult:.12, tot:1660000, n:38, tone:'--tabacaria'},
+    ser:{nm:'Serviço · food service', mult:.12, tot:1670000, n:62, tone:'--servico'},
+  };
+
+  // Curva ABC — dados demo (mês, toda a rede: R$ 13,86 mi)
+  const ABC_TOTAL=13860000;
+  const ABCP=[
+    {nm:'Coca-Cola Lata 350ml', code:'PRD-00412', k:'beb', v:448200, mg:31},
+    {nm:'Cigarro Marlboro Red', code:'PRD-00666', k:'tab', v:412700, mg:12},
+    {nm:'Red Bull Energy 250ml', code:'PRD-00087', k:'beb', v:366400, mg:34},
+    {nm:'Skol Lata 350ml', code:'PRD-00655', k:'beb', v:341900, mg:27},
+    {nm:'Café Espresso', code:'PRD-00990', k:'ser', v:298300, mg:68},
+    {nm:'Água Mineral 500ml', code:'PRD-00777', k:'beb', v:262800, mg:45},
+    {nm:'Heineken Long Neck 330ml', code:'PRD-00230', k:'beb', v:244100, mg:24},
+    {nm:'Pão de Queijo (kg)', code:'PRD-01203', k:'per', v:231600, mg:52},
+    {nm:'Sanduíche Natural Frango', code:'PRD-00918', k:'per', v:187400, mg:41},
+    {nm:'Doritos 55g', code:'PRD-00301', k:'ali', v:148900, mg:33},
+  ];
+
+  let cat='vendas', query='', cur=null, curDim=null, curPraca='todas', curCat='todas', curMetric='cupons';
+  const savedViews=[['Curva A bebidas — Litoral','Gabriela'],['Quebra validade por loja — mês','Abílio']];
+
+  function renderCats(){
+    $('cats').innerHTML=CATS.map(c=>{
+      const n=REPS.filter(r=>r.c===c[0]).reduce((a,r)=>a+r.fix,0);
+      return `<button class="cat ${cat===c[0]?'on':''}" data-c="${c[0]}">${c[1]}<span class="n">${n}</span></button>`;
+    }).join('');
+    $('cats').querySelectorAll('.cat').forEach(b=>b.addEventListener('click',()=>{ cat=b.dataset.c; query=''; $('q').value=''; renderCats(); renderGrid(); }));
+  }
+
+  function renderSaved(){
+    $('saved').innerHTML='<span class="lbl">Visões salvas</span>'+savedViews.map(v=>`<button class="sv">${v[0]} <span class="by">· ${v[1]}</span></button>`).join('');
+    $('saved').querySelectorAll('.sv').forEach(b=>b.addEventListener('click',()=>toast('Visão salva: filtros e agrupamento restaurados como o dono deixou')));
+  }
+
+  function renderGrid(){
+    const list=REPS.filter(r=> query ? (r.nm+' '+r.d).toLowerCase().includes(query) : r.c===cat);
+    $('grid').innerHTML=list.map(r=>`
+      <button class="rep" data-i="${REPS.indexOf(r)}">
+        <b>${r.nm}</b><span class="d">${r.d}</span>
+        <span class="foot"><span class="tagc">${CATS.find(c=>c[0]===r.c)[1]}</span><span class="cover-pill">substitui ${r.fix} relatórios fixos</span></span>
+      </button>`).join('') || '<p style="color:var(--faint);font-size:13px">Nada encontrado — tente outro termo.</p>';
+    $('grid').querySelectorAll('.rep').forEach(b=>b.addEventListener('click',()=>openExp(+b.dataset.i)));
+  }
+
+  $('q').addEventListener('input',e=>{ query=e.target.value.trim().toLowerCase(); renderGrid(); });
+
+  function seedRows(dim,seed,mult,kind){
+    let s=seed; const rnd=()=> (s=(s*1103515245+12345)%2147483648)/2147483648;
+    const base=(kind==='quebra'?QBASES[dim]:BASES[dim])||300000;
+    return ROWS[dim].map(nm=>{
+      const v=base*(0.4+rnd()*1.2)*mult;
+      const tk=21+rnd()*7, cup=v/tk, it=2.4+rnd()*1.4, mg=22+rnd()*16;
+      const occ=v/62, pv=0.8+rnd()*2.2, up=8+rnd()*26, ced=v*(0.04+rnd()*0.09);
+      return {nm,v,cup,tk,it,mg,occ,pv,up,ced};
+    }).sort((a,b)=>b.v-a.v);
+  }
+
+  function openExp(i){
+    cur=REPS[i]; curDim=cur.dim||'loja'; curPraca='todas'; curCat='todas'; curMetric='cupons';
+    ['cover','searchbox','saved','grid'].forEach(id=>$(id).classList.add('off'));
+    $('exp').classList.add('on');
+    drawExp();
+  }
+  function closeExp(){
+    $('exp').classList.remove('on');
+    ['cover','searchbox','saved','grid'].forEach(id=>$(id).classList.remove('off'));
+  }
+
+  function fbarHTML(){
+    return `<div class="fbar">
+      <div class="fctl"><label>Período</label><select><option>Hoje</option><option>Ontem</option><option>Últimos 7 dias</option><option selected>Este mês</option><option>Personalizado…</option></select></div>
+      <div class="fctl"><label>Praça</label><select id="f-praca">${Object.keys(PRACAS).map(k=>`<option value="${k}" ${k===curPraca?'selected':''}>${PRACAS[k].nm}</option>`).join('')}</select></div>
+      <div class="fctl"><label>Loja</label><select><option selected>Todas as 24</option><option>LOJ-001 · Aurora Centro</option><option>LOJ-010 · Aurora Campinas Norte</option><option>LOJ-018 · Aurora Santos</option><option>Escolher loja…</option></select></div>
+      <div class="fctl"><label>Categoria</label><select id="f-cat">${Object.keys(CATT).map(k=>`<option value="${k}" ${k===curCat?'selected':''}>${CATT[k].nm}</option>`).join('')}</select></div>
+    </div>`;
+  }
+
+  /* ---------- Curva ABC (renderizada com dados demo) ---------- */
+  function abcBody(){
+    const pm=PRACAS[curPraca].mult;
+    const rows=ABCP.filter(p=>curCat==='todas'||p.k===curCat).map(p=>({...p, v:p.v*pm}));
+    const catTotal=(curCat==='todas'?ABC_TOTAL:CATT[curCat].tot)*pm;
+    const shown=rows.reduce((a,r)=>a+r.v,0), max=rows.length?rows[0].v:1;
+    let cum=0;
+    const tone=k=>`<span class="dot" style="background:var(${CATT[k].tone})"></span>${CATT[k].nm.split(' ·')[0]}`;
+    let body=rows.map((r,i)=>{ cum+=r.v; return `<tr>
+      <td class="r num" style="color:var(--faint)">${i+1}</td>
+      <td style="font-weight:600">${r.code} · ${r.nm}</td>
+      <td>${tone(r.k)}</td>
+      <td><span class="cls A">A</span></td>
+      <td class="r num">${BRL.format(r.v)}</td>
+      <td class="r num" style="font-weight:640;color:var(--brand-ink)">${PCT(r.v/catTotal*100)}</td>
+      <td class="r num">${PCT(cum/catTotal*100)}</td>
+      <td class="r num">${r.mg}%</td>
+      <td style="width:130px"><span class="bar" style="width:${Math.round(r.v/max*110)}px"></span></td></tr>`; }).join('');
+    if(curCat==='todas'){
+      const restA=ABC_TOTAL*0.80*pm-shown, b=ABC_TOTAL*0.15*pm, c=ABC_TOTAL*0.05*pm;
+      const agg=(nm,cls,v,mg)=>{ cum+=v; return `<tr class="agg"><td></td><td>${nm}</td><td>—</td><td><span class="cls ${cls}">${cls}</span></td><td class="r num">${BRL.format(v)}</td><td class="r num">${PCT(v/catTotal*100)}</td><td class="r num">${PCT(cum/catTotal*100)}</td><td class="r num">${mg}</td><td></td></tr>`; };
+      body+=agg('… mais 148 produtos curva A','A',restA,'≈ 29%')+agg('Curva B · 312 produtos','B',b,'≈ 33%')+agg('Curva C · 794 produtos','C',c,'≈ 30%');
+    }else{
+      const rest=catTotal-shown; cum+=rest;
+      body+=`<tr class="agg"><td></td><td>… mais ${CATT[curCat].n} produtos de ${CATT[curCat].nm.split(' ·')[0]} (curvas B e C)</td><td>${tone(curCat)}</td><td><span class="cls C">B·C</span></td><td class="r num">${BRL.format(rest)}</td><td class="r num">${PCT(rest/catTotal*100)}</td><td class="r num">100,0%</td><td class="r num">≈ 31%</td><td></td></tr>`;
+    }
+    return `<p class="note"><b>Leitura:</b> ~160 produtos (curva A) concentram 80% da venda — reposição e planograma se decidem aqui. Troque a categoria ou a praça para achar a curva A de cada contexto.</p>
+      <div class="card"><div style="overflow-x:auto">
+      <table class="stbl">
+        <thead><tr><th class="r">#</th><th>Produto</th><th>Categoria</th><th>Classe</th><th class="r">Venda no mês</th><th class="r">Part. %</th><th class="r">Acum. %</th><th class="r">Margem</th><th style="width:130px"></th></tr></thead>
+        <tbody>${body}</tbody>
+        <tfoot><tr><td></td><td>Total</td><td></td><td></td><td class="r num">${BRL.format(catTotal)}</td><td class="r num">100,0%</td><td class="r num">—</td><td class="r num">28,4%</td><td></td></tr></tfoot>
+      </table></div></div>`;
+  }
+
+  /* ---------- Mapa de calor vendas por hora (renderizado) ---------- */
+  const DAYS=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const g=(x,mu,s)=>Math.exp(-((x-mu)*(x-mu))/(2*s*s));
+  function cuponsHora(d,h,lit){
+    const wk=d>=5, fri=d===4;
+    let m=100*g(h,8,1.3), l=42*g(h,12.2,1.1), e=120*g(h,18.3,1.6), n=34*g(h,21.8,1.7), dz=6*g(h,3,2);
+    if(wk){m*=.45; l*=.85; e*=.75; n*=1.6;}
+    if(fri){e*=1.12; n*=1.7;}
+    if(lit){m*=.62; e*=.85; n*=4.0; if(wk||fri){n*=1.35; l*=1.25;}}
+    return Math.max(3, 9+m+l+e+n+dz+Math.sin(d*7.3+h*2.9)*5);
+  }
+  function ticketHora(d,h,lit){
+    return 21.5+5.5*g(h,19,2.3)+(lit?4.5*g(h,21.5,2):0)+1.8*g(h,8,1.5)+(d>=5?1.4:0)+Math.sin(d*3.1+h*1.7)*0.6;
+  }
+  function heatBody(){
+    const lit=curPraca==='lit';
+    const val=(d,h)=> curMetric==='ticket' ? ticketHora(d,h,lit) : cuponsHora(d,h,lit)*(curMetric==='fat'?24.8:1)*PRACAS[curPraca].mult*(curPraca==='todas'?1:3.4);
+    const fmt=v=> curMetric==='cupons' ? Math.round(v)+' cupons/h' : curMetric==='fat' ? BRL.format(v)+'/h' : BRL2.format(v);
+    let min=1e9,max=0; const M=[];
+    for(let d=0;d<7;d++){ M[d]=[]; for(let h=0;h<24;h++){ const v=val(d,h); M[d][h]=v; if(v<min)min=v; if(v>max)max=v; } }
+    let grid='<div class="hd"></div>'+Array.from({length:24},(_,h)=>`<div class="hd">${h}h</div>`).join('');
+    for(let d=0;d<7;d++){
+      grid+=`<div class="dl">${DAYS[d]}</div>`;
+      for(let h=0;h<24;h++){
+        const a=(0.05+0.95*(M[d][h]-min)/(max-min)).toFixed(2);
+        grid+=`<div class="c" style="background:rgba(58,92,216,${a})" title="${DAYS[d]} ${h}h · ${fmt(M[d][h])}"></div>`;
+      }
+    }
+    const insight= lit
+      ? '<b>Litoral:</b> o pico é noturno — 20h–23h supera a manhã, e o fim de semana amplifica. Escala de equipe e reposição deveriam seguir a curva da praça, não a média da rede.'
+      : '<b>Rede:</b> picos de 07–09h (café da manhã) e 17–20h (saída do trabalho), sexta puxa a noite. Troque a praça para Litoral e veja o pico mudar para a noite.';
+    return `<div class="card"><div class="hmwrap"><div class="hm">${grid}</div></div>
+      <div class="legend">Menos <span class="scale"></span> Mais · média por loja, ${curMetric==='cupons'?'cupons por hora':curMetric==='fat'?'faturamento por hora':'ticket médio'} — passe o mouse para o valor</div></div>
+      <p class="note">${insight}</p>`;
+  }
+
+  /* ---------- Tabelas genéricas por tipo ---------- */
+  function tableBody(){
+    const seed=11+REPS.indexOf(cur)*17+Object.keys(DIMS).indexOf(curDim)*7+PRACAS[curPraca].seed+Object.keys(CATT).indexOf(curCat)*100;
+    const rows=seedRows(curDim,seed,PRACAS[curPraca].mult*CATT[curCat].mult,cur.kind);
+    const tot=rows.reduce((a,r)=>a+r.v,0), max=rows[0].v, kind=cur.kind||'venda';
+    const bar=r=>`<td style="width:130px"><span class="bar" style="width:${Math.round(r.v/max*110)}px"></span></td>`;
+    const part=r=>`<td class="r num" style="font-weight:640;color:var(--brand-ink)">${PCT(r.v/tot*100)}</td>`;
+    let head='',body='',foot='';
+    if(kind==='margem'){
+      head=`<th>${DIMS[curDim]}</th><th class="r">Venda</th><th class="r">Part. %</th><th class="r">Margem R$</th><th class="r">Margem %</th><th style="width:130px"></th>`;
+      body=rows.map(r=>`<tr><td style="font-weight:600">${r.nm}</td><td class="r num">${BRL.format(r.v)}</td>${part(r)}<td class="r num">${BRL.format(r.v*r.mg/100)}</td><td class="r num">${PCT(r.mg)}</td>${bar(r)}</tr>`).join('');
+      const mgT=rows.reduce((a,r)=>a+r.v*r.mg/100,0);
+      foot=`<td>Total</td><td class="r num">${BRL.format(tot)}</td><td class="r num">100,0%</td><td class="r num">${BRL.format(mgT)}</td><td class="r num">${PCT(mgT/tot*100)}</td><td></td>`;
+    }else if(kind==='quebra'){
+      head=`<th>${DIMS[curDim]}</th><th class="r">Valor no mês</th><th class="r">Part. %</th><th class="r">Ocorrências</th><th class="r">% da venda</th><th style="width:130px"></th>`;
+      body=rows.map(r=>`<tr><td style="font-weight:600">${r.nm}</td><td class="r num">${BRL.format(r.v)}</td>${part(r)}<td class="r num">${NL.format(Math.round(r.occ))}</td><td class="r num">${PCT(r.pv)}</td>${bar(r)}</tr>`).join('');
+      foot=`<td>Total</td><td class="r num">${BRL.format(tot)}</td><td class="r num">100,0%</td><td class="r num">${NL.format(Math.round(rows.reduce((a,r)=>a+r.occ,0)))}</td><td class="r num">1,9%</td><td></td>`;
+    }else if(kind==='promo'){
+      head=`<th>${DIMS[curDim]}</th><th class="r">Venda na promoção</th><th class="r">Part. %</th><th class="r">Uplift vs. baseline</th><th class="r">Margem cedida</th><th style="width:130px"></th>`;
+      body=rows.map(r=>`<tr><td style="font-weight:600">${r.nm}</td><td class="r num">${BRL.format(r.v)}</td>${part(r)}<td class="r num" style="color:var(--ok);font-weight:640">+${PCT(r.up)}</td><td class="r num" style="color:var(--bad)">−${BRL.format(r.ced)}</td>${bar(r)}</tr>`).join('');
+      foot=`<td>Total</td><td class="r num">${BRL.format(tot)}</td><td class="r num">100,0%</td><td class="r num">—</td><td class="r num" style="color:var(--bad)">−${BRL.format(rows.reduce((a,r)=>a+r.ced,0))}</td><td></td>`;
+    }else{
+      head=`<th>${DIMS[curDim]}</th><th class="r">Venda</th><th class="r">Part. %</th><th class="r">Cupons</th><th class="r">Itens/cupom</th><th class="r">Ticket médio</th><th style="width:130px"></th>`;
+      body=rows.map(r=>`<tr><td style="font-weight:600">${r.nm}</td><td class="r num">${BRL.format(r.v)}</td>${part(r)}<td class="r num">${NL.format(Math.round(r.cup))}</td><td class="r num">${r.it.toFixed(1).replace('.',',')}</td><td class="r num">${BRL2.format(r.tk)}</td>${bar(r)}</tr>`).join('');
+      const cupT=rows.reduce((a,r)=>a+r.cup,0);
+      foot=`<td>Total</td><td class="r num">${BRL.format(tot)}</td><td class="r num">100,0%</td><td class="r num">${NL.format(Math.round(cupT))}</td><td class="r num">3,1</td><td class="r num">${BRL2.format(tot/cupT)}</td><td></td>`;
+    }
+    return `<div class="card"><div style="overflow-x:auto">
+      <table class="stbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody><tfoot><tr>${foot}</tr></tfoot></table>
+    </div></div>`;
+  }
+
+  function drawExp(){
+    const heat=cur.special==='heat';
+    const chips= heat
+      ? `<div class="dims"><span class="lbl">Métrica</span>${[['cupons','Cupons por hora'],['fat','Faturamento'],['ticket','Ticket médio']].map(m=>`<button class="dim ${m[0]===curMetric?'on':''}" data-m="${m[0]}">${m[1]}</button>`).join('')}</div>`
+      : `<div class="dims"><span class="lbl">Agrupar por</span>${cur.dims.map(d=>`<button class="dim ${d===curDim?'on':''}" data-d="${d}">${DIMS[d]}</button>`).join('')}</div>`;
+    const body= heat ? heatBody() : (cur.special==='abc'&&curDim==='produto') ? abcBody() : tableBody();
+    $('exp').innerHTML=`
+      <button class="back" id="back"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg>Voltar ao catálogo</button>
+      <h1>${cur.nm}</h1>
+      <p class="sub">${cur.d} · <b>substitui ${cur.fix} relatórios fixos</b></p>
+      ${fbarHTML()}
+      ${chips}
+      ${body}
+      <div class="acts">
+        <button class="btn pri" id="a-save">Salvar visão</button>
+        <button class="btn" id="a-sched">Agendar envio</button>
+        <button class="btn" id="a-csv">Exportar CSV</button>
+        <button class="btn" id="a-pdf">Exportar PDF</button>
+      </div>`;
+    $('back').addEventListener('click',closeExp);
+    $('exp').querySelectorAll('.dim').forEach(b=>b.addEventListener('click',()=>{
+      if(b.dataset.m){ curMetric=b.dataset.m; } else { curDim=b.dataset.d; }
+      drawExp();
+    }));
+    $('f-praca').addEventListener('change',e=>{ curPraca=e.target.value; drawExp(); });
+    $('f-cat').addEventListener('change',e=>{ curCat=e.target.value; drawExp(); });
+    $('a-save').addEventListener('click',()=>{
+      const det= cur.special==='heat' ? (curPraca==='lit'?'Litoral':'rede') : DIMS[curDim]+(curCat!=='todas'?' · '+CATT[curCat].nm.split(' ·')[0]:'')+(curPraca!=='todas'?' — '+PRACAS[curPraca].nm.split(' ·')[0]:'');
+      savedViews.push([cur.nm+' · '+det,'você']); renderSaved();
+      toast('Visão salva — aparece no seu catálogo e pode ser compartilhada com a equipe');
+    });
+    $('a-sched').addEventListener('click',()=>toast('Agendado: toda manhã às 07h por e-mail e WhatsApp, já com os filtros desta visão'));
+    $('a-csv').addEventListener('click',()=>toast('CSV exportado com os filtros aplicados'));
+    $('a-pdf').addEventListener('click',()=>toast('PDF gerado no layout de impressão'));
+  }
+
+  let tmr;
+  function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tmr); tmr=setTimeout(()=>t.classList.remove('show'),2800); }
+
+  renderCats(); renderSaved(); renderGrid();
+})();
+</script>

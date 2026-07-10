@@ -1,0 +1,418 @@
+<meta charset="utf-8">
+<title>Helix Store — Estoque &amp; Validade</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA; --ok-line:#BFE0CD;
+    --bad:#C0392B; --bad-tint:#F8E6E3; --bad-line:#EEC4BD;
+    --warn:#B7791F; --warn-tint:#F6EEDC; --warn-line:#E6D4A8;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 16px 40px -18px rgba(22,26,36,.22);
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:26px 20px 54px}
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+  .app{max-width:1220px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:15px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcfe)}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; gap:6px}
+  .brand .wm b .store{color:var(--brand)}
+  .brand .wm span{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; line-height:1.3}
+  .whoami{display:flex; align-items:center; gap:9px}
+  .whoami .av{width:30px; height:30px; border-radius:50%; background:var(--brand); color:#fff; display:grid; place-items:center; font-size:12px; font-weight:700}
+  .whoami .nm b{font-size:12.5px; font-weight:600; display:block; line-height:1.2}
+  .whoami .nm span{font-size:10.5px; color:var(--faint)}
+
+  .shell{display:grid; grid-template-columns:225px 1fr}
+  @media(max-width:840px){ .shell{grid-template-columns:1fr} .side{display:none} }
+  .side{border-right:1px solid var(--line); padding:16px 12px; background:var(--surface-2)}
+  .side .grp{font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:12px 12px 6px}
+  .nav{display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:9px; border:0; background:transparent; width:100%; cursor:pointer; font-family:inherit; font-size:13.5px; color:var(--ink-2); font-weight:500; text-align:left}
+  .nav svg{width:17px; height:17px; flex:none; color:var(--muted); stroke-width:1.7}
+  .nav:hover{background:#e7ebf5}
+  .nav[aria-current="true"]{background:var(--brand); color:#fff; font-weight:600}
+  .nav[aria-current="true"] svg{color:#fff}
+  .nav .badge{margin-left:auto; font-size:10.5px; font-weight:700; background:var(--bad); color:#fff; border-radius:999px; padding:1px 7px; min-width:18px; text-align:center}
+  .nav[aria-current="true"] .badge{background:rgba(255,255,255,.25)}
+  .nav:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
+
+  .main{padding:22px 24px 30px; min-width:0}
+  .phead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap}
+  .phead h1{margin:0; font-size:21px; font-weight:660; letter-spacing:-.02em}
+  .phead .crumb{font-size:11.5px; color:var(--faint); font-weight:600; text-transform:uppercase; margin-bottom:3px}
+  .seg{display:flex; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:3px}
+  .seg button{border:0; background:transparent; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); padding:6px 13px; border-radius:6px; cursor:pointer}
+  .seg button.on{background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+  .view{display:none} .view[data-on]{display:block; animation:rise .24s ease}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){ .view[data-on]{animation:none} }
+
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px}
+  @media(max-width:900px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  .kpi{border:1px solid var(--line); border-radius:13px; padding:13px 15px; background:#fff}
+  .kpi .k{font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .kpi .v{font-size:23px; font-weight:680; letter-spacing:-.02em; margin-top:4px; line-height:1.05}
+  .kpi .v small{font-size:12px; color:var(--muted); font-weight:600}
+  .kpi .s{font-size:11px; color:var(--muted); margin-top:3px}
+  .kpi .s b{color:var(--ok); font-weight:700}
+  .kpi.bad{border-color:var(--bad-line); background:linear-gradient(180deg,#fff,var(--bad-tint))}
+  .kpi.bad .v{color:var(--bad)}
+  .kpi.warn{border-color:var(--warn-line); background:linear-gradient(180deg,#fff,var(--warn-tint))}
+  .kpi.warn .v{color:var(--warn)}
+
+  .grid2{display:grid; grid-template-columns:1.5fr 1fr; gap:14px}
+  @media(max-width:900px){ .grid2{grid-template-columns:1fr} }
+  .card{border:1px solid var(--line); border-radius:14px; background:#fff; overflow:hidden; margin-bottom:14px}
+  .card .ch{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px 10px}
+  .card .ch h2{margin:0; font-size:14.5px; font-weight:640}
+  .card .ch .sum{font-size:11.5px; color:var(--faint)}
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap}
+  .pill.ok{color:var(--ok); background:var(--ok-tint)}
+  .pill.warn{color:var(--warn); background:var(--warn-tint)}
+  .pill.bad{color:var(--bad); background:var(--bad-tint)}
+  .pill .pip{width:6px; height:6px; border-radius:50%; background:currentColor}
+
+  .stbl{width:100%; border-collapse:collapse; font-size:13px}
+  .stbl th{text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:6px 16px; border-bottom:1px solid var(--line)}
+  .stbl th.r,.stbl td.r{text-align:right}
+  .stbl td{padding:10px 16px; border-bottom:1px solid var(--line-2); vertical-align:middle}
+  .stbl tbody tr:last-child td{border-bottom:0}
+  .stbl tr:hover td{background:var(--surface-2)}
+  .stbl b{font-weight:600}
+  .stbl small{color:var(--faint); font-size:11px; display:block}
+  .stbl tr.hoje td{background:linear-gradient(90deg,var(--bad-tint),transparent 65%)}
+
+  .sug{font-family:inherit; font-size:11px; font-weight:650; padding:5px 11px; border-radius:999px; border:1px solid var(--brand); background:#fff; color:var(--brand-ink); cursor:pointer; white-space:nowrap}
+  .sug:hover{background:var(--brand-tint)}
+  .sug:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .btn{font-family:inherit; font-size:12px; font-weight:650; padding:7px 13px; border-radius:9px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer}
+  .btn:hover{background:var(--brand-ink)}
+  .btn.ghost{background:#fff; color:var(--brand-ink)}
+  .btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+  .central{display:flex; align-items:center; gap:12px; padding:11px 16px; border:1px solid var(--bad-line); background:var(--bad-tint); border-radius:12px; margin-bottom:14px; font-size:12.5px}
+  .central .sev{width:8px; height:8px; border-radius:50%; background:var(--bad); flex:none}
+  .central b{font-weight:650}
+  .central .act{margin-left:auto; font-family:inherit; font-size:11.5px; font-weight:650; color:var(--brand-ink); background:none; border:0; cursor:pointer; white-space:nowrap; padding:0}
+  .central .act:hover{text-decoration:underline}
+
+  .search{position:relative; margin-bottom:10px; max-width:440px}
+  .search svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--faint)}
+  .search input{width:100%; font-family:inherit; font-size:13.5px; padding:9px 12px 9px 34px; border:1px solid var(--line); border-radius:10px; background:#fff}
+  .search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; align-items:center}
+  .chips .lbl{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:700; margin-right:2px}
+  .chip{font-family:inherit; font-size:11px; font-weight:650; padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer}
+  .chip.on{background:var(--brand); border-color:var(--brand); color:#fff}
+  .chip:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .catdot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; vertical-align:baseline}
+
+  .loss{padding:4px 16px 14px}
+  .lossrow{display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line-2); font-size:12.5px}
+  .lossrow:last-child{border-bottom:0}
+  .lossrow .l{display:flex; align-items:center; gap:9px; color:var(--ink-2)}
+  .lossrow .l .dot{width:8px; height:8px; border-radius:50%}
+  .lossrow .v{font-weight:650; font-variant-numeric:tabular-nums}
+  .lossrow .v.ok{color:var(--ok)} .lossrow .v.warn{color:var(--warn)} .lossrow .v.bad{color:var(--bad)}
+  .bar{height:7px; border-radius:4px; background:var(--line-2); overflow:hidden; margin-top:5px}
+  .bar i{display:block; height:100%; border-radius:4px}
+
+  .qform{display:grid; grid-template-columns:1.4fr .6fr 1fr 1.4fr auto; gap:10px; padding:6px 16px 16px; align-items:end}
+  @media(max-width:900px){ .qform{grid-template-columns:1fr 1fr} }
+  .qform label{display:block; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; margin-bottom:4px}
+  .qform input,.qform select{width:100%; font-family:inherit; font-size:13px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink)}
+  .qform input:focus,.qform select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--ink); color:#fff; font-size:13px; font-weight:600; padding:11px 18px; border-radius:11px; opacity:0; pointer-events:none; transition:.25s; z-index:9}
+  .toast.show{opacity:1; transform:translateX(-50%)}
+
+  .caption{max-width:1220px; margin:14px auto 0; font-size:11.5px; color:var(--faint); text-align:center}
+  .caption b{color:var(--muted); font-weight:600}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/></linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Estoque &amp; validade · Aurora Centro (LOJ-004)</span></div>
+    </div>
+    <div class="whoami"><div class="av">AB</div><div class="nm"><b>Abílio S.</b><span>Administrador · Grupo Aurora</span></div></div>
+  </div>
+
+  <div class="shell">
+    <nav class="side">
+      <div class="grp">Rede</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Visão geral</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21V7l6-4 6 4v14"/><path d="M15 11h3a2 2 0 012 2v6a2 2 0 01-2 2"/><path d="M7 9h4M7 13h4"/></svg>Lojas</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Fechamentos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Relatórios</button>
+      <div class="grp">Operação</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 18v2h10v-2"/><path d="M7 10h6"/></svg>PDV</button>
+      <button class="nav" aria-current="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/></svg>Estoque &amp; validade<span class="badge">14</span></button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/><path d="M3 4h2l2.4 12h10.2L20 8H6"/></svg>Reposição</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/></svg>Contagem</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>Delivery</button>
+      <div class="grp">Retaguarda</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Produtos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 12l-8 8-9-9V4h7l10 8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Promoções &amp; combos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18v12H3z"/><path d="M3 10h18"/></svg>Financeiro</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 3h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 21h4l.5-2.6a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>Configurações</button>
+    </nav>
+
+    <main class="main">
+      <div class="phead">
+        <div><div class="crumb">Aurora Centro · LOJ-004 · sexta, 10 jul 2026</div><h1>Estoque &amp; validade</h1></div>
+        <div class="seg" id="seg">
+          <button class="on" data-view="radar">Radar de validade</button>
+          <button data-view="quebras">Quebras</button>
+          <button data-view="posicao">Posição de estoque</button>
+        </div>
+      </div>
+
+      <!-- ============ RADAR DE VALIDADE ============ -->
+      <section class="view" data-view="radar" data-on>
+        <div class="kpis">
+          <div class="kpi bad"><div class="k">Vence hoje</div><div class="v num">14 itens</div><div class="s" style="color:var(--bad);font-weight:650">R$ 890 a preço de venda</div></div>
+          <div class="kpi warn"><div class="k">Vence em ≤ 3 dias</div><div class="v num">41 itens</div><div class="s" style="color:var(--warn);font-weight:650">R$ 2.140 a preço de venda</div></div>
+          <div class="kpi"><div class="k">Vence em ≤ 7 dias</div><div class="v num">96 itens</div><div class="s">R$ 4.870 a preço de venda</div></div>
+          <div class="kpi"><div class="k">Valor em risco · julho</div><div class="v num">R$ 12,4 mil</div><div class="s"><b>▼ 18%</b> vs jun · PRM-023 recuperou R$ 3.180</div></div>
+        </div>
+
+        <div class="central"><span class="sev"></span><span><b>Pendência #2 da Central da rede:</b> os 14 itens que vencem HOJE nesta loja são a fila abaixo — resolva aqui e a pendência some lá.</span><button class="act">Ver na Central →</button></div>
+
+        <div class="card">
+          <div class="ch"><h2>Lotes por vencimento</h2><span class="sum">perecíveis · ordenado do mais urgente · ação sugerida pelo giro</span></div>
+          <div style="overflow-x:auto">
+          <table class="stbl">
+            <thead><tr><th>Produto</th><th>Lote</th><th class="r">Qtd</th><th>Vence em</th><th class="r">Valor</th><th>Ação sugerida</th></tr></thead>
+            <tbody id="lotes"></tbody>
+          </table>
+          </div>
+          <div style="padding:10px 16px 14px; font-size:12px; color:var(--muted)"><b style="font-weight:600">PRM-023 — Validade curta:</b> −30% automático em perecível a ≤ 2 dias do vencimento. Aplicar aqui gera a promoção no PDV na hora, com etiqueta para a gôndola.</div>
+        </div>
+      </section>
+
+      <!-- ============ QUEBRAS ============ -->
+      <section class="view" data-view="quebras">
+        <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi warn"><div class="k">Quebra do mês · loja</div><div class="v num">1,9%<small> da venda</small></div><div class="s" style="color:var(--warn);font-weight:650">meta ≤ 1,5% · R$ 3.870 em julho</div></div>
+          <div class="kpi"><div class="k">Registros no mês</div><div class="v num">23<small> QBR</small></div><div class="s">último: QBR-0893 · hoje 07h40</div></div>
+          <div class="kpi"><div class="k">Maior motivo</div><div class="v num">Validade</div><div class="s">61% do valor quebrado — o radar existe para reduzir isto</div></div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><h2>Registrar quebra</h2><span class="sum">entra no custo da loja e na auditoria — quem registrou fica gravado</span></div>
+          <form class="qform" id="qform">
+            <div><label for="q-prd">Produto</label><input id="q-prd" placeholder="PRD-00000 ou nome…" value="PRD-01421 · Queijo Prato Fatiado 150g"></div>
+            <div><label for="q-qtd">Qtd</label><input id="q-qtd" type="number" min="1" value="4"></div>
+            <div><label for="q-mot">Motivo</label><select id="q-mot"><option value="validade">Validade</option><option value="avaria">Avaria</option><option value="furto">Furto</option><option value="consumo">Consumo interno</option></select></div>
+            <div><label for="q-obs">Observação</label><input id="q-obs" placeholder="opcional"></div>
+            <div><button type="submit" class="btn">Registrar QBR</button></div>
+          </form>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <div class="ch"><h2>Quebras de julho · Aurora Centro</h2><span class="sum">23 registros · R$ 3.870</span></div>
+            <div style="overflow-x:auto">
+            <table class="stbl">
+              <thead><tr><th>Registro</th><th>Produto</th><th class="r">Qtd</th><th>Motivo</th><th class="r">Valor</th><th>Quem</th></tr></thead>
+              <tbody id="qbody">
+                <tr><td><b>QBR-0893</b><small>hoje · 07h40</small></td><td>Sanduíche Natural Frango <small>PRD-00918</small></td><td class="r num">5 un</td><td><span class="pill bad">Validade</span></td><td class="r num">R$ 84,50</td><td>M. Souza <small>repositor</small></td></tr>
+                <tr><td><b>QBR-0889</b><small>ontem · 21h15</small></td><td>Iogurte Grego Morango <small>PRD-01377</small></td><td class="r num">8 un</td><td><span class="pill bad">Validade</span></td><td class="r num">R$ 47,20</td><td>C. Lima <small>operador-caixa</small></td></tr>
+                <tr><td><b>QBR-0884</b><small>08 jul · 16h02</small></td><td>Coca-Cola Lata 350ml <small>PRD-00412</small></td><td class="r num">6 un</td><td><span class="pill warn">Avaria</span></td><td class="r num">R$ 39,00</td><td>M. Souza <small>repositor</small></td></tr>
+                <tr><td><b>QBR-0877</b><small>06 jul · 11h30</small></td><td>Cigarro Marlboro Red <small>PRD-00666</small></td><td class="r num">2 un</td><td><span class="pill bad">Furto</span></td><td class="r num">R$ 25,50</td><td>R. Nunes <small>gerente-loja</small></td></tr>
+                <tr><td><b>QBR-0871</b><small>04 jul · 09h12</small></td><td>Café Espresso <small>PRD-00990</small></td><td class="r num">3 un</td><td><span class="pill ok">Consumo interno</span></td><td class="r num">R$ 18,00</td><td>R. Nunes <small>gerente-loja</small></td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="ch"><h2>Por motivo · julho</h2><span class="sum">% do valor</span></div>
+              <div class="loss">
+                <div class="lossrow"><div class="l"><span class="dot" style="background:var(--bad)"></span>Validade</div><span class="v bad num">61%</span></div>
+                <div class="bar" style="margin:0 0 4px"><i style="width:61%;background:var(--bad)"></i></div>
+                <div class="lossrow"><div class="l"><span class="dot" style="background:var(--warn)"></span>Avaria</div><span class="v warn num">22%</span></div>
+                <div class="bar" style="margin:0 0 4px"><i style="width:22%;background:var(--warn)"></i></div>
+                <div class="lossrow"><div class="l"><span class="dot" style="background:var(--tabacaria)"></span>Furto</div><span class="v num">11%</span></div>
+                <div class="bar" style="margin:0 0 4px"><i style="width:11%;background:var(--tabacaria)"></i></div>
+                <div class="lossrow"><div class="l"><span class="dot" style="background:var(--servico)"></span>Consumo interno</div><span class="v num">6%</span></div>
+                <div class="bar"><i style="width:6%;background:var(--servico)"></i></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="ch"><h2>Maior quebra da rede</h2><span class="sum">% da venda · mês</span></div>
+              <div class="loss">
+                <div class="lossrow"><div class="l"><b style="font-weight:600">1. Aurora Guarujá</b> <small style="color:var(--faint)">LOJ-019</small></div><span class="v bad num">2,8%</span></div>
+                <div class="lossrow"><div class="l"><b style="font-weight:600">2. Aurora Itu</b> <small style="color:var(--faint)">LOJ-002</small></div><span class="v warn num">2,4%</span></div>
+                <div class="lossrow"><div class="l"><b style="font-weight:600">3. Aurora Campinas Sul</b> <small style="color:var(--faint)">LOJ-011</small></div><span class="v warn num">2,2%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ POSIÇÃO DE ESTOQUE ============ -->
+      <section class="view" data-view="posicao">
+        <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="sq" type="search" placeholder="Buscar produto, PRD- ou EAN…" aria-label="Buscar produto"></div>
+        <div class="chips" id="catchips"><span class="lbl">Categoria</span></div>
+        <div class="chips" id="curvachips"><span class="lbl">Curva</span></div>
+        <div class="card">
+          <div class="ch"><h2>Posição · Aurora Centro</h2><span class="sum" id="poscount"></span></div>
+          <div style="overflow-x:auto">
+          <table class="stbl">
+            <thead><tr><th>Produto</th><th>Categoria</th><th class="r">Saldo</th><th class="r">Giro/dia</th><th class="r">Cobertura</th><th class="r">Curva</th><th>Status</th></tr></thead>
+            <tbody id="pbody"></tbody>
+          </table>
+          </div>
+          <div style="padding:10px 16px 14px; font-size:12px; color:var(--muted)">Cobertura = saldo ÷ giro médio de 14 dias. <b style="font-weight:600">Ruptura de curva A vira pendência na Central</b> e sugestão automática na tela de Reposição.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<p class="caption">Protótipo Helix Store · Validade tratada como <b>fila de ação, não relatório</b>: cada lote a vencer já chega com a ação sugerida — desconto PRM, remanejo entre lojas ou quebra — e os 14 itens de hoje são a mesma pendência que cobra você na Central.</p>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  let tmr;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(tmr); tmr=setTimeout(()=>t.classList.remove('show'),2600); }
+
+  /* ---------- tabs ---------- */
+  const segBtns=[...document.querySelectorAll('#seg button')], views=[...document.querySelectorAll('.view')];
+  segBtns.forEach(b=>b.addEventListener('click',()=>{
+    segBtns.forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    views.forEach(v=> v.dataset.view===b.dataset.view ? v.setAttribute('data-on','') : v.removeAttribute('data-on'));
+  }));
+
+  /* ---------- radar: lotes + ação sugerida ---------- */
+  const LOTES=[
+    {prd:'Sanduíche Natural Frango', cod:'PRD-00918', lote:'L-0907A', qtd:'5 un', vence:0, val:'R$ 84,50', acao:'prm',  done:'PRM-023 aplicada · −30% no PDV'},
+    {prd:'Pão de Queijo (kg)',       cod:'PRD-01203', lote:'L-1007M', qtd:'3,4 kg', vence:0, val:'R$ 169,70', acao:'prm', done:'PRM-023 aplicada · −30% no PDV'},
+    {prd:'Iogurte Grego Morango 100g',cod:'PRD-01377', lote:'L-2606F', qtd:'6 un', vence:0, val:'R$ 41,40', acao:'prm', done:'PRM-023 aplicada · −30% no PDV'},
+    {prd:'Salada de Frutas Pote 300g',cod:'PRD-01390', lote:'L-0907B', qtd:'4 un', vence:0, val:'R$ 51,60', acao:'qbr', done:'QBR-0894 registrada · validade'},
+    {prd:'Queijo Prato Fatiado 150g', cod:'PRD-01421', lote:'L-2306F', qtd:'7 un', vence:0, val:'R$ 62,30', acao:'qbr', done:'QBR-0895 registrada · validade'},
+    {prd:'Wrap Peito de Peru',        cod:'PRD-00931', lote:'L-1007C', qtd:'9 un', vence:2, val:'R$ 134,10', acao:'rem', done:'Remanejo solicitado · sai na rota de amanhã'},
+    {prd:'Leite Fermentado 6×80g',    cod:'PRD-01362', lote:'L-2806F', qtd:'11 un', vence:2, val:'R$ 96,80', acao:'prm', done:'PRM-023 aplicada · −30% no PDV'},
+    {prd:'Presunto Cozido Fatiado 200g',cod:'PRD-01438', lote:'L-2506F', qtd:'5 un', vence:3, val:'R$ 74,50', acao:'rem', done:'Remanejo solicitado · sai na rota de amanhã'},
+    {prd:'Bolo de Cenoura Fatia',     cod:'PRD-01455', lote:'L-1007D', qtd:'8 un', vence:3, val:'R$ 71,20', acao:'prm', done:'PRM-023 aplicada · −30% no PDV'},
+  ];
+  const ACAO={prm:'Aplicar PRM-023 (−30%)', rem:'Remanejar → Aurora Sorocaba Norte', qbr:'Registrar quebra'};
+  const TOAST={prm:'PRM-023 ativa no PDV · etiqueta de gôndola na fila de impressão',
+               rem:'Remanejo criado → Aurora Sorocaba Norte (LOJ-008) · coleta amanhã 07h',
+               qbr:'Quebra registrada por validade · custo lançado na loja'};
+  function venceCell(d){
+    if(d===0) return '<span class="pill bad"><span class="pip"></span>HOJE</span>';
+    if(d<=2)  return `<span class="pill warn"><span class="pip"></span>${d} dias</span>`;
+    return `<span class="num" style="font-weight:640">${d} dias</span>`;
+  }
+  $('lotes').innerHTML=LOTES.map((l,i)=>`
+    <tr class="${l.vence===0?'hoje':''}">
+      <td><b>${l.prd}</b><small>${l.cod} · ${l.cod==='PRD-01203'?'pesável — balança':'Perecível'}</small></td>
+      <td class="num">${l.lote}</td><td class="r num">${l.qtd}</td>
+      <td>${venceCell(l.vence)}</td><td class="r num">${l.val}</td>
+      <td><button class="sug" data-i="${i}">${ACAO[l.acao]}</button></td>
+    </tr>`).join('');
+  $('lotes').querySelectorAll('.sug').forEach(b=>b.addEventListener('click',()=>{
+    const l=LOTES[+b.dataset.i];
+    b.outerHTML=`<span class="pill ok"><span class="pip"></span>${l.done}</span>`;
+    toast(TOAST[l.acao]);
+  }));
+
+  /* ---------- quebras: form ---------- */
+  let nextQbr=894;
+  $('qform').addEventListener('submit',e=>{
+    e.preventDefault();
+    const prd=$('q-prd').value.trim()||'—', qtd=$('q-qtd').value||'1';
+    const mot=$('q-mot'), motTx=mot.options[mot.selectedIndex].text, motVal=mot.value;
+    const pill=motVal==='consumo'?'ok':(motVal==='avaria'?'warn':'bad');
+    const cod='QBR-0'+(nextQbr++);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><b>${cod}</b><small>hoje · agora</small></td><td>${prd}</td><td class="r num">${qtd} un</td><td><span class="pill ${pill}">${motTx}</span></td><td class="r num">—</td><td>Abílio S. <small>administrador</small></td>`;
+    $('qbody').prepend(tr);
+    toast(`${cod} registrada · motivo: ${motTx.toLowerCase()} · auditoria gravada`);
+    $('q-obs').value='';
+  });
+
+  /* ---------- posição: busca + chips ---------- */
+  const CATS={bebidas:['Bebidas','--bebidas'], alimentos:['Alimentos','--alimentos'], perecivel:['Perecível','--perecivel'], tabacaria:['Tabacaria','--tabacaria'], servico:['Serviço','--servico']};
+  const PROD=[
+    {cod:'PRD-00087', nm:'Red Bull Energy 250ml', ean:'9002490100070', cat:'bebidas', saldo:'0 un', giro:'18 un', cob:0,   curva:'A', st:'ruptura'},
+    {cod:'PRD-00412', nm:'Coca-Cola Lata 350ml',  ean:'7894900011517', cat:'bebidas', saldo:'96 un', giro:'34 un', cob:2.8, curva:'A', st:'ok'},
+    {cod:'PRD-00777', nm:'Água Mineral 500ml',    ean:'7894900530001', cat:'bebidas', saldo:'210 un', giro:'41 un', cob:5.1, curva:'A', st:'ok'},
+    {cod:'PRD-00655', nm:'Skol Lata 350ml',       ean:'7891149010806', cat:'bebidas', saldo:'58 un', giro:'27 un', cob:2.1, curva:'A', st:'ok'},
+    {cod:'PRD-00230', nm:'Heineken Long Neck 330ml',ean:'7896045506040', cat:'bebidas', saldo:'44 un', giro:'12 un', cob:3.7, curva:'A', st:'ok'},
+    {cod:'PRD-00918', nm:'Sanduíche Natural Frango',ean:'produção própria', cat:'perecivel', saldo:'11 un', giro:'6 un', cob:1.8, curva:'B', st:'ok'},
+    {cod:'PRD-01203', nm:'Pão de Queijo (kg)',    ean:'pesável — balança', cat:'perecivel', saldo:'6,2 kg', giro:'4,8 kg', cob:1.3, curva:'A', st:'ok'},
+    {cod:'PRD-01377', nm:'Iogurte Grego Morango 100g',ean:'7891025115847', cat:'perecivel', saldo:'26 un', giro:'9 un', cob:2.9, curva:'B', st:'ok'},
+    {cod:'PRD-00301', nm:'Doritos 55g',           ean:'7892840818316', cat:'alimentos', saldo:'64 un', giro:'7 un', cob:9.1, curva:'B', st:'ok'},
+    {cod:'PRD-01544', nm:'Carvão 3kg',            ean:'7898915878026', cat:'alimentos', saldo:'39 un', giro:'0,8 un', cob:48.8, curva:'C', st:'excesso'},
+    {cod:'PRD-00666', nm:'Cigarro Marlboro Red',  ean:'7896098990131', cat:'tabacaria', saldo:'87 un', giro:'22 un', cob:4.0, curva:'A', st:'ok'},
+    {cod:'PRD-00990', nm:'Café Espresso',         ean:'food service', cat:'servico', saldo:'2,1 kg grão', giro:'0,4 kg', cob:5.3, curva:'A', st:'ok'},
+  ];
+  let fcat='all', fcurva='all', q='';
+  function chipRow(el, items, cur, cb){
+    el.querySelectorAll('.chip').forEach(c=>c.remove());
+    items.forEach(([k,label])=>{
+      const b=document.createElement('button');
+      b.className='chip'+(cur===k?' on':''); b.textContent=label; b.dataset.f=k;
+      b.addEventListener('click',()=>cb(k));
+      el.appendChild(b);
+    });
+  }
+  function drawChips(){
+    chipRow($('catchips'), [['all','Todas'],...Object.entries(CATS).map(([k,v])=>[k,v[0]])], fcat, k=>{fcat=k; drawChips(); rows();});
+    chipRow($('curvachips'), [['all','Todas'],['A','Curva A'],['B','Curva B'],['C','Curva C']], fcurva, k=>{fcurva=k; drawChips(); rows();});
+  }
+  function stCell(p){
+    if(p.st==='ruptura') return `<span class="pill bad"><span class="pip"></span>RUPTURA</span> <button class="sug" data-repo="${p.cod}" style="margin-left:6px">Gerar reposição →</button>`;
+    if(p.st==='excesso') return '<span class="pill warn"><span class="pip"></span>Excesso</span>';
+    return '<span class="pill ok"><span class="pip"></span>OK</span>';
+  }
+  function rows(){
+    const list=PROD.filter(p=>{
+      if(fcat!=='all'&&p.cat!==fcat) return false;
+      if(fcurva!=='all'&&p.curva!==fcurva) return false;
+      if(q && !((p.nm+' '+p.cod+' '+p.ean).toLowerCase().includes(q))) return false;
+      return true;
+    }).sort((a,b)=> (a.st==='ruptura'?-1:0)-(b.st==='ruptura'?-1:0) || a.cob-b.cob);
+    $('pbody').innerHTML=list.map(p=>`
+      <tr>
+        <td><b><span class="catdot" style="background:var(${CATS[p.cat][1]})"></span>${p.nm}</b><small>${p.cod} · ${p.ean}</small></td>
+        <td>${CATS[p.cat][0]}</td>
+        <td class="r num">${p.saldo}</td><td class="r num">${p.giro}</td>
+        <td class="r num" style="${p.cob===0?'color:var(--bad);font-weight:700':(p.cob<2?'color:var(--warn);font-weight:650':'')}">${p.cob===0?'—':String(p.cob.toFixed(1)).replace('.',',')+' d'}</td>
+        <td class="r num">${p.curva}</td>
+        <td>${stCell(p)}</td>
+      </tr>`).join('');
+    $('poscount').textContent=list.length+' de '+PROD.length+' produtos · contagem CNT-0244 · ontem 22h';
+    $('pbody').querySelectorAll('[data-repo]').forEach(b=>b.addEventListener('click',()=>{
+      b.outerHTML='<span class="pill ok"><span class="pip"></span>PED-0412 criado</span>';
+      toast('PED-0412 · 48 un Red Bull 250ml → FOR-208 · venda perdida estimada R$ 1.240/dia');
+    }));
+  }
+  $('sq').addEventListener('input',e=>{ q=e.target.value.trim().toLowerCase(); rows(); });
+  drawChips(); rows();
+})();
+</script>

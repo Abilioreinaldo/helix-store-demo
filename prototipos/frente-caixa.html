@@ -1,0 +1,652 @@
+<meta charset="utf-8">
+<title>Helix Store — Frente de Caixa</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA; --ok-line:#BFE0CD;
+    --bad:#C0392B; --bad-tint:#F8E6E3;
+    --warn:#B7791F; --warn-tint:#F6EEDC;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 16px 40px -18px rgba(22,26,36,.22);
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:26px 20px 46px}
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+  .app{max-width:1180px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:14px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcfe)}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px}
+  .brand .wm{display:flex; flex-direction:column; line-height:1.15}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; gap:6px}
+  .brand .wm b .store{color:var(--brand)}
+  .brand .wm span{font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  .tb-right{display:flex; align-items:center; gap:14px; font-size:12.5px; color:var(--muted)}
+  .tgls{display:flex; gap:6px}
+  .tgl{font-family:inherit; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:4px 9px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--faint); cursor:pointer; transition:.12s}
+  .tgl[aria-pressed="true"].warn{background:var(--warn-tint); border-color:var(--warn); color:var(--warn)}
+  .tgl[aria-pressed="true"].info{background:var(--brand-tint); border-color:var(--brand); color:var(--brand-ink)}
+  .op{display:flex; align-items:center; gap:8px; padding-left:14px; border-left:1px solid var(--line)}
+  .op .av{width:28px; height:28px; border-radius:50%; background:var(--ink); color:#fff; display:grid; place-items:center; font-size:11px; font-weight:700}
+  .op b{color:var(--ink-2); font-weight:600; font-size:12.5px}
+
+  .banner{display:none; align-items:center; gap:10px; padding:9px 22px; font-size:12.5px; font-weight:600; border-bottom:1px solid var(--line)}
+  .banner.show{display:flex}
+  .banner svg{width:16px; height:16px; flex:none}
+  .banner.warn{background:var(--warn-tint); color:var(--warn); border-color:#EADFC0}
+  .banner.info{background:var(--brand-tint); color:var(--brand-ink); border-color:#D5DEF7}
+  .banner b{font-weight:700}
+
+  .stage{display:grid; grid-template-columns:410px 1fr; min-height:600px}
+  @media(max-width:880px){ .stage{grid-template-columns:1fr} }
+
+  /* ---- cupom / ticket (left) ---- */
+  .ticket{border-right:1px solid var(--line); display:flex; flex-direction:column; background:var(--surface-2)}
+  .ticket .th{display:flex; align-items:center; justify-content:space-between; padding:13px 18px; border-bottom:1px solid var(--line)}
+  .ticket .th b{font-size:14px; font-weight:640}
+  .ticket .th .cnt{font-size:11px; color:var(--faint); font-weight:600}
+
+  .cpfbar{display:flex; align-items:center; gap:9px; padding:9px 18px; border-bottom:1px solid var(--line); background:#fff; font-size:12px; color:var(--muted)}
+  .cpfbar svg{width:15px; height:15px; color:var(--faint); flex:none}
+  .cpfbar b{color:var(--ink-2); font-weight:650}
+  .cpfbar .pts{color:var(--servico); font-weight:700}
+  .cpfbar button{margin-left:auto; font-family:inherit; font-size:10.5px; font-weight:700; color:var(--brand); background:transparent; border:0; cursor:pointer; padding:2px 4px}
+  .cpfbar button:hover{text-decoration:underline}
+
+  .items{flex:1; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:7px; min-height:220px}
+  .empty{margin:auto; text-align:center; color:var(--faint); padding:30px 20px}
+  .empty svg{width:34px; height:34px; opacity:.5; margin-bottom:10px}
+  .empty p{margin:0; font-size:13px; max-width:26ch}
+  .item{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:11px; padding:9px 12px}
+  .item .dot{width:9px; height:9px; border-radius:50%; flex:none}
+  .item .in{flex:1; min-width:0}
+  .item .in b{font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:6px; line-height:1.25; flex-wrap:wrap}
+  .item .in span{font-size:11px; color:var(--faint); display:block}
+  .item .amt{font-weight:660; font-size:13.5px; font-variant-numeric:tabular-nums; flex:none}
+  .item .x{border:0; background:transparent; color:var(--faint); cursor:pointer; padding:2px; border-radius:6px; line-height:0; flex:none}
+  .item .x:hover{color:var(--bad); background:var(--bad-tint)}
+  .item .x svg{width:15px; height:15px}
+  .item .chev{border:0; background:transparent; color:var(--faint); cursor:pointer; padding:2px; line-height:0; flex:none; transition:.15s}
+  .item .chev svg{width:14px; height:14px}
+  .item.open .chev{transform:rotate(180deg)}
+  .item.disc{background:var(--ok-tint); border-color:var(--ok-line); padding:6px 12px 6px 31px}
+  .item.disc .in b{color:var(--ok); font-size:12px; font-weight:650}
+  .item.disc .amt{color:var(--ok); font-size:12.5px}
+  .subitems{display:none; margin:-3px 2px 0 22px; padding:7px 12px; background:#fff; border:1px dashed var(--line); border-radius:9px; font-size:11.5px; color:var(--muted)}
+  .subitems.show{display:block}
+  .subitems div{display:flex; justify-content:space-between; padding:1px 0}
+  .subitems .eco{color:var(--ok); font-weight:650; border-top:1px solid var(--line-2); margin-top:3px; padding-top:3px}
+
+  .bdg{font-size:8.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:1.5px 6px; border-radius:999px; flex:none; display:inline-flex; align-items:center; gap:3px}
+  .bdg svg{width:9px; height:9px}
+  .bdg.scale{background:#E4F3EC; color:var(--perecivel)}
+  .bdg.fs{background:#EFEAFF; color:var(--servico)}
+  .bdg.r18{background:var(--warn-tint); color:var(--warn)}
+  .bdg.combo{background:var(--brand-tint); color:var(--brand-ink)}
+
+  .age{display:none; align-items:center; gap:9px; margin:0 10px 8px; padding:9px 12px; border-radius:10px; font-size:12px; font-weight:600}
+  .age.show{display:flex}
+  .age.need{background:var(--warn-tint); border:1px solid #EADFC0; color:var(--warn)}
+  .age.done{background:var(--ok-tint); border:1px solid var(--ok-line); color:var(--ok)}
+  .age svg{width:15px; height:15px; flex:none}
+  .age button{margin-left:auto; font-family:inherit; font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:8px; border:1px solid var(--warn); background:#fff; color:var(--warn); cursor:pointer; flex:none}
+  .age button:hover{background:var(--warn-tint)}
+
+  .totals{border-top:1px solid var(--line); padding:13px 18px; background:#fff}
+  .totrow{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--muted); margin-bottom:5px}
+  .totrow .disc-v{color:var(--ok); font-weight:650}
+  .totrow.big{margin:8px 0 0; align-items:baseline}
+  .totrow.big .k{font-size:13px; color:var(--ink-2); font-weight:600; text-transform:uppercase; letter-spacing:.05em}
+  .totrow.big .v{font-size:31px; font-weight:700; letter-spacing:-.02em; color:var(--ink)}
+  .drow{display:flex; align-items:center; gap:6px; margin:7px 0 2px; font-size:11.5px; color:var(--faint)}
+  .drow .db{font-family:inherit; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--muted); cursor:pointer}
+  .drow .db:hover{border-color:var(--brand); color:var(--brand)}
+  .drow .db[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-tint); color:var(--brand-ink)}
+  .dauth{display:none; margin-top:8px; padding:10px 12px; border-radius:10px; background:var(--warn-tint); border:1px solid #EADFC0; font-size:12px}
+  .dauth.show{display:block}
+  .dauth p{margin:0 0 7px; color:var(--warn); font-weight:650}
+  .dauth .row{display:flex; gap:7px}
+  .dauth input{flex:1; font-family:inherit; font-size:13px; font-weight:700; letter-spacing:.2em; padding:7px 10px; border:1px solid var(--line); border-radius:8px}
+  .dauth input:focus{outline:none; border-color:var(--warn)}
+  .dauth button{font-family:inherit; font-size:12px; font-weight:650; padding:7px 13px; border-radius:8px; border:1px solid var(--warn); background:#fff; color:var(--warn); cursor:pointer}
+  .dauth .err{color:var(--bad); font-weight:650; margin-top:6px}
+  .dok{display:none; margin-top:8px; font-size:11.5px; color:var(--ok); font-weight:650}
+  .dok.show{display:block}
+
+  /* ---- ops (right) ---- */
+  .ops{display:flex; flex-direction:column; min-width:0}
+  .ops .sec{padding:15px 20px; border-bottom:1px solid var(--line)}
+  .ops .sec:last-child{border-bottom:0}
+  .sech{display:flex; align-items:center; justify-content:space-between; margin-bottom:11px}
+  .sech h2{margin:0; font-size:13px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--ink-2)}
+  .sech .kbd{font-size:10.5px; color:var(--faint); font-weight:600}
+  .kb{display:inline-block; font-family:inherit; font-size:10.5px; font-weight:700; color:var(--ink-2); background:#fff; border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:1px 6px; min-width:20px; text-align:center}
+
+  .scan{display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:12px; background:#fff; padding:11px 14px}
+  .scan:focus-within{border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+  .scan svg{width:19px; height:19px; color:var(--faint); flex:none}
+  .scan input{flex:1; border:0; font-family:inherit; font-size:14px; font-weight:500; color:var(--ink); background:transparent}
+  .scan input:focus{outline:none}
+  .scan input::placeholder{color:var(--faint)}
+  .scan-msg{font-size:11.5px; margin-top:6px; font-weight:600; min-height:17px}
+  .scan-msg.ok{color:var(--ok)} .scan-msg.err{color:var(--bad)}
+
+  .cats{display:flex; gap:7px; margin-bottom:10px; flex-wrap:wrap}
+  .cat{font-family:inherit; font-size:12px; font-weight:650; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--muted); cursor:pointer; display:flex; align-items:center; gap:7px; transition:.12s}
+  .cat .cdot{width:8px; height:8px; border-radius:50%}
+  .cat:hover{border-color:var(--brand)}
+  .cat[aria-pressed="true"]{border-color:var(--ink-2); background:var(--ink); color:#fff}
+  .prods{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
+  @media(max-width:560px){ .prods{grid-template-columns:repeat(2,1fr)} }
+  .prodbtn{border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; cursor:pointer; font-family:inherit; text-align:left; transition:.12s; position:relative}
+  .prodbtn:hover{border-color:var(--brand); background:var(--brand-tint)}
+  .prodbtn .ph{display:flex; align-items:center; gap:7px; margin-bottom:2px}
+  .prodbtn .ph .dot{width:8px; height:8px; border-radius:50%; flex:none}
+  .prodbtn b{display:block; font-size:12.5px; font-weight:600; line-height:1.3}
+  .prodbtn .pf{display:flex; justify-content:space-between; align-items:baseline; margin-top:3px}
+  .prodbtn .cd{font-size:10px; color:var(--faint); font-weight:600}
+  .prodbtn span.pr{font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; font-weight:650}
+  .prodbtn .tag{position:absolute; top:8px; right:9px; font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:1px 5px; border-radius:999px}
+  .prodbtn .tag.kg{background:#E4F3EC; color:var(--perecivel)}
+  .prodbtn .tag.r18{background:var(--warn-tint); color:var(--warn)}
+
+  /* payment */
+  .pay-sec{margin-top:auto; background:var(--surface-2)}
+  .pays{display:grid; grid-template-columns:repeat(5,1fr); gap:9px; margin-bottom:13px}
+  @media(max-width:720px){ .pays{grid-template-columns:repeat(3,1fr)} }
+  .extra{display:none; margin-bottom:13px; border:1px solid var(--line); border-radius:11px; background:#fff; padding:12px 14px}
+  .extra.show{display:block}
+  .extra label{display:block; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:700; margin-bottom:6px}
+  .extra input,.extra select{width:100%; font-family:inherit; font-size:13.5px; font-weight:600; padding:9px 11px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink)}
+  .extra input:focus,.extra select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+  .extra .st{margin-top:8px; font-size:12px; font-weight:650; display:flex; align-items:center; gap:7px}
+  .extra .st.ok{color:var(--ok)} .extra .st.err{color:var(--bad)} .extra .st.wait{color:var(--warn)}
+  .extra .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .pixbox{display:flex; align-items:center; gap:16px}
+  .pixbox svg{width:96px; height:96px; flex:none; border:1px solid var(--line); border-radius:8px; padding:6px; background:#fff}
+  .pixbox .pin{flex:1}
+  .pixbox .pin .v{font-size:20px; font-weight:700; font-variant-numeric:tabular-nums}
+  .pixbox .pin p{margin:2px 0 0; font-size:11.5px; color:var(--faint)}
+  .payb{border:1px solid var(--line); border-radius:11px; padding:11px 8px; background:#fff; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:6px; transition:.12s}
+  .payb svg{width:20px; height:20px; color:var(--ink-2); stroke-width:1.7}
+  .payb b{font-size:12px; font-weight:600}
+  .payb small{font-size:9.5px; color:var(--faint); font-weight:700}
+  .payb:hover{border-color:var(--brand)}
+  .payb[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-tint); box-shadow:0 0 0 2px var(--brand-tint)}
+  .payb[aria-pressed="true"] svg{color:var(--brand)}
+  .finrow{display:flex; gap:10px}
+  .btn{flex:none; font-family:inherit; font-size:14px; font-weight:600; padding:14px 18px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer; transition:.13s}
+  .btn:hover{border-color:var(--muted)}
+  .btn.fin{flex:1; background:var(--ok); border-color:var(--ok); color:#fff; display:flex; align-items:center; justify-content:center; gap:10px; font-size:15px; font-weight:680}
+  .btn.fin:hover{filter:brightness(.96)}
+  .btn.fin:disabled{opacity:.4; cursor:not-allowed; filter:none}
+  .btn.fin .kb{background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.35); color:#fff}
+  .btn:focus-visible,.payb:focus-visible,.prodbtn:focus-visible,.cat:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+  /* cupom overlay */
+  .cupom{position:absolute; inset:0; background:rgba(22,26,36,.55); display:none; align-items:center; justify-content:center; padding:24px; z-index:5}
+  .cupom.show{display:flex; animation:fade .2s ease}
+  @keyframes fade{from{opacity:0} to{opacity:1}}
+  .cupom .card{background:#fff; border-radius:16px; padding:30px 30px 24px; width:380px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .cupom .ring{width:60px; height:60px; border-radius:50%; background:var(--ok-tint); display:grid; place-items:center; margin:0 auto 12px}
+  .cupom .ring svg{width:32px; height:32px; color:var(--ok)}
+  .cupom .ring.cont{background:var(--warn-tint)}
+  .cupom .ring.cont svg{color:var(--warn)}
+  .cupom h3{margin:0 0 3px; font-size:19px; font-weight:660}
+  .cupom p{margin:0; color:var(--muted); font-size:13px}
+  .cupom .tot{font-size:30px; font-weight:700; margin:14px 0 2px; font-variant-numeric:tabular-nums}
+  .cupom .via{font-size:12px; color:var(--faint); margin-bottom:12px}
+  .cupom .chave{font-size:10px; color:var(--faint); font-variant-numeric:tabular-nums; letter-spacing:.04em; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:7px 9px; margin-bottom:16px; line-height:1.5}
+  .cupom .chave b{display:block; font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:1px}
+  .cupom .go{width:100%; padding:12px; border:0; border-radius:11px; background:var(--brand); color:#fff; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer}
+
+  .caption{max-width:1180px; margin:14px auto 0; padding:0 6px; font-size:11.5px; color:var(--faint); text-align:center}
+  .caption b{color:var(--muted); font-weight:600}
+</style>
+
+<div class="app" style="position:relative">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/></linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Frente de caixa</span></div>
+    </div>
+    <div class="tb-right">
+      <div class="tgls">
+        <button class="tgl warn" id="tg-cont" aria-pressed="false" title="Demo: alternar contingência NFC-e">contingência</button>
+        <button class="tgl info" id="tg-off" aria-pressed="false" title="Demo: alternar modo offline">offline</button>
+      </div>
+      <span class="num">PDV 02 · Aurora Centro (LOJ-004) · sexta, 10 jul 2026 · 15h42</span>
+      <div class="op"><div class="av">CM</div><b>Carla M.</b></div>
+    </div>
+  </div>
+
+  <div class="banner warn" id="bn-cont">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+    <span><b>NFC-e em contingência</b> — cupom autorizado offline, transmitirá à SEFAZ quando o link voltar.</span>
+  </div>
+  <div class="banner info" id="bn-off">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l22 22"/><path d="M16.7 11.6A6 6 0 0119 16.5"/><path d="M5 12.5a10 10 0 0111.4-2.1"/><path d="M1.4 8.9a15 15 0 016.3-3.7"/><path d="M12 20h.01"/></svg>
+    <span><b>PDV operando OFFLINE</b> — 3 cupons na fila de sincronização · venda continua no servidor da loja (Edge).</span>
+  </div>
+
+  <div class="stage">
+    <!-- CUPOM -->
+    <div class="ticket">
+      <div class="th"><b>Cupom atual</b><span class="cnt" id="cnt">0 itens</span></div>
+      <div class="cpfbar" id="cpfbar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+        <span id="cpf-txt">CPF <b>123.•••.•••-44</b> · cliente identificado · <span class="pts">1.240 pts</span></span>
+        <button id="cpf-btn">trocar</button>
+      </div>
+      <div class="items" id="items"></div>
+      <div class="age" id="age"></div>
+      <div class="totals">
+        <div class="totrow"><span>Subtotal</span><span class="num" id="t-sub">R$ 0,00</span></div>
+        <div class="totrow"><span>Descontos (promoções + manual)</span><span class="num disc-v" id="t-disc">R$ 0,00</span></div>
+        <div class="totrow big"><span class="k">Total</span><span class="v num" id="t-total">R$ 0,00</span></div>
+        <div class="drow"><span>Desconto manual:</span>
+          <button class="db" id="d5" aria-pressed="false">5%</button>
+          <button class="db" id="d10" aria-pressed="false">10%</button>
+          <button class="db" id="d0">limpar</button>
+          <span style="margin-left:auto">alçada do operador: até 5%</span>
+        </div>
+        <div class="dauth" id="dauth">
+          <p>Desconto de 10% excede a alçada do operador (máx. 5%) — autorização do gerente.</p>
+          <div class="row"><input id="mgr-code" placeholder="código do gerente" maxlength="4" inputmode="numeric"><button id="mgr-go">Autorizar</button></div>
+          <div class="err" id="mgr-err" style="display:none">✕ Código inválido — tente novamente ou peça aprovação remota.</div>
+        </div>
+        <div class="dok" id="dok"></div>
+      </div>
+    </div>
+
+    <!-- OPS -->
+    <div class="ops">
+      <div class="sec">
+        <div class="sech"><h2>Registrar item</h2><span class="kbd"><span class="kb">F4</span> buscar · leitor sempre ativo</span></div>
+        <div class="scan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5v14M7 5v14M11 5v14M15 5v9M19 5v14M21 5v14M17 5v14"/></svg>
+          <input id="scan" placeholder="Escaneie o código de barras ou digite EAN / nome / PRD" autocomplete="off">
+        </div>
+        <div class="scan-msg" id="scan-msg"></div>
+      </div>
+
+      <div class="sec">
+        <div class="sech"><h2>Atalhos por categoria</h2><span class="kbd">preço de rede · exceções da LOJ-004 aplicadas</span></div>
+        <div class="cats" id="cats"></div>
+        <div class="prods" id="prods"></div>
+      </div>
+
+      <div class="sec pay-sec">
+        <div class="sech"><h2>Pagamento</h2><span class="kbd" id="chg" style="color:var(--muted)"></span></div>
+        <div class="pays" id="pays"></div>
+        <div class="extra" id="extra"></div>
+        <div class="finrow">
+          <button class="btn" id="btn-clear">Cancelar</button>
+          <button class="btn fin" id="btn-fin" disabled>Finalizar venda <span class="kb">F8</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- cupom emitido -->
+  <div class="cupom" id="cupom">
+    <div class="card">
+      <div class="ring" id="cu-ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <h3 id="cu-h">Venda concluída</h3>
+      <p id="cu-p">NFC-e autorizada · cupom enviado</p>
+      <div class="tot num" id="cu-tot">R$ 0,00</div>
+      <div class="via" id="cu-via">—</div>
+      <div class="chave num"><b>Chave de acesso NFC-e</b>3526 0712 3456 7800 0199 6500 2000 0123 4110 0123 4569</div>
+      <button class="go" id="cu-go">Nova venda &nbsp;·&nbsp; F1</button>
+    </div>
+  </div>
+</div>
+
+<p class="caption">Protótipo Helix Store · Frente de caixa (PDV 02 · Aurora Centro). &nbsp;<b>Leitura por EAN com promoções automáticas (PRM-012 leve-pague, PRM-007 combo) e desconto manual acima da alçada exigindo gerente. Perguntas ao time: balança para pesáveis no PDV, CPF+fidelidade no v1 e operação offline-first (Edge) — precisamos?</b></p>
+
+<script>
+(function(){
+  const BRL=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+  const money=v=>BRL.format(v);
+  const KG=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:3});
+  const $=id=>document.getElementById(id);
+
+  const CATS=[
+    {id:'bebidas',   nm:'Bebidas',    cor:'var(--bebidas)'},
+    {id:'alimentos', nm:'Alimentos',  cor:'var(--alimentos)'},
+    {id:'perecivel', nm:'Perecíveis', cor:'var(--perecivel)'},
+    {id:'tabacaria', nm:'Tabacaria',  cor:'var(--tabacaria)'},
+    {id:'servico',   nm:'Cafeteria',  cor:'var(--servico)'},
+  ];
+  const CATALOG=[
+    {code:'PRD-00412', nm:'Coca-Cola Lata 350ml',     ean:'7894900011517', cat:'bebidas',   preco:6.50},
+    {code:'PRD-00087', nm:'Red Bull Energy 250ml',    ean:'9002490100070', cat:'bebidas',   preco:12.90},
+    {code:'PRD-00655', nm:'Skol Lata 350ml',          ean:'7891149010806', cat:'bebidas',   preco:4.99,  r18:true},
+    {code:'PRD-00230', nm:'Heineken Long Neck 330ml', ean:'7896045506040', cat:'bebidas',   preco:8.90,  r18:true},
+    {code:'PRD-00777', nm:'Água Mineral 500ml',       ean:'7894900530001', cat:'bebidas',   preco:3.50},
+    {code:'PRD-00301', nm:'Doritos 55g',              ean:'7892840818316', cat:'alimentos', preco:7.50},
+    {code:'PRD-01544', nm:'Carvão 3kg',               ean:'7898915878026', cat:'alimentos', preco:18.90},
+    {code:'PRD-00918', nm:'Sanduíche Natural Frango', ean:'produção própria', cat:'perecivel', preco:16.90},
+    {code:'PRD-01203', nm:'Pão de Queijo (kg)',       ean:'pesável — balança', cat:'perecivel', preco:49.90, kg:true},
+    {code:'PRD-00666', nm:'Cigarro Marlboro Red',     ean:'7896098990131', cat:'tabacaria', preco:12.75, r18:true},
+    {code:'PRD-00990', nm:'Café Espresso',            ean:'food service',  cat:'servico',   preco:6.00,  fs:true},
+  ];
+  const catColor=c=>(CATS.find(x=>x.id===c)||{}).cor||'var(--muted)';
+
+  const methods=[
+    {id:'dinheiro', nm:'Dinheiro', sub:'F5',  ic:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/>'},
+    {id:'debito',   nm:'Débito',   sub:'F6',  ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'},
+    {id:'credito',  nm:'Crédito',  sub:'F7',  ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>'},
+    {id:'pix',      nm:'PIX',      sub:'F9',  ic:'<path d="M12 3l4 4-4 4-4-4z"/><path d="M12 13l4 4-4 4-4-4z"/><path d="M3 12l4-4 4 4-4 4z"/><path d="M13 12l4-4 4 4-4 4z"/>'},
+    {id:'dividir',  nm:'Dividir',  sub:'F11', ic:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18"/>'},
+  ];
+
+  // ---- estado ----
+  let sale=[], method=null, ageOk=false, discPct=0, discNeedAuth=false, discAuthorized=false;
+  let tefOk=false, pixOk=false, cashIn=null, split={v1:50, m1:'dinheiro', m2:'pix'};
+  let comboOpen=false, cpfOn=true;
+
+  function seed(){
+    sale=[
+      {type:'un', code:'PRD-00412', nm:'Coca-Cola Lata 350ml', ean:'7894900011517', cat:'bebidas', qty:2, preco:6.50},
+      {type:'un', code:'PRD-00301', nm:'Doritos 55g', ean:'7892840818316', cat:'alimentos', qty:1, preco:7.50},
+      {type:'un', code:'PRD-00655', nm:'Skol Lata 350ml', ean:'7891149010806', cat:'bebidas', qty:3, preco:4.99, r18:true},
+      {type:'kg', code:'PRD-01203', nm:'Pão de Queijo', cat:'perecivel', peso:0.320, precoKg:49.90},
+      {type:'combo', code:'PRM-007', nm:'Combo Churrasco', cat:'bebidas', preco:59.90, avulso:72.30, r18:true,
+        sub:[{q:'6×', nm:'Heineken Long Neck 330ml (PRD-00230)', v:53.40},{q:'1×', nm:'Carvão 3kg (PRD-01544)', v:18.90}]},
+      {type:'un', code:'PRD-00990', nm:'Café Espresso', ean:'food service', cat:'servico', qty:1, preco:6.00, fs:true},
+    ];
+  }
+
+  const lineTotal=i=> i.type==='kg' ? i.peso*i.precoKg : i.type==='combo' ? i.preco : i.qty*i.preco;
+  const gross=()=>sale.reduce((s,i)=>s+lineTotal(i),0);
+  function promoDisc(){ // PRM-012 leve 3 pague 2 na Skol
+    const skol=sale.find(i=>i.code==='PRD-00655');
+    return skol ? Math.floor(skol.qty/3)*4.99 : 0;
+  }
+  const manualDisc=()=> (gross()-promoDisc())*discPct/100;
+  const totalDisc=()=>promoDisc()+manualDisc();
+  const grand=()=>gross()-totalDisc();
+  const hasR18=()=>sale.some(i=>i.r18);
+
+  // ---- cupom ----
+  function renderItems(){
+    const el=$('items');
+    if(!sale.length){
+      el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5v14M6 5v14M9 5v14M13 5v9M17 5v14M21 5v14"/></svg><p>Escaneie o código de barras do primeiro item para iniciar a venda</p></div>';
+    } else {
+      el.innerHTML=sale.map((i,ix)=>{
+        const cor=catColor(i.cat);
+        const xbtn='<button class="x" data-ix="'+ix+'" aria-label="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+        if(i.type==='kg'){
+          return '<div class="item"><span class="dot" style="background:'+cor+'"></span><div class="in"><b>'+i.nm
+            +' <span class="bdg scale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v4"/><path d="M5 7h14l-2 13H7z"/></svg>balança</span></b>'
+            +'<span class="num">'+i.code+' · pesável · '+KG.format(i.peso)+' kg × '+money(i.precoKg)+'/kg</span></div>'
+            +'<span class="amt num">'+money(i.peso*i.precoKg)+'</span>'+xbtn+'</div>';
+        }
+        if(i.type==='combo'){
+          const subs='<div class="subitems'+(comboOpen?' show':'')+'" id="combo-sub">'
+            +i.sub.map(s=>'<div><span>'+s.q+' '+s.nm+'</span><span class="num">'+money(s.v)+'</span></div>').join('')
+            +'<div class="eco"><span>Avulso sairia '+money(i.avulso)+'</span><span class="num">economia '+money(i.avulso-i.preco)+'</span></div></div>';
+          return '<div class="item'+(comboOpen?' open':'')+'"><span class="dot" style="background:var(--brand)"></span>'
+            +'<div class="in"><b>'+i.nm+' <span class="bdg combo">combo</span></b><span class="num">'+i.code+' · 6 Heineken + Carvão 3kg · preço fechado</span></div>'
+            +'<span class="amt num">'+money(i.preco)+'</span>'
+            +'<button class="chev" id="combo-tg" aria-label="Expandir combo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg></button>'+xbtn+'</div>'+subs;
+        }
+        const badges=(i.fs?' <span class="bdg fs">food service</span>':'')+(i.r18?' <span class="bdg r18">+18</span>':'');
+        let line='<div class="item"><span class="dot" style="background:'+cor+'"></span><div class="in"><b>'
+          +(i.qty>1?i.qty+'× ':'')+i.nm+badges+'</b><span class="num">'+i.code+' · EAN '+i.ean+' · '+i.qty+' × '+money(i.preco)+'</span></div>'
+          +'<span class="amt num">'+money(i.qty*i.preco)+'</span>'+xbtn+'</div>';
+        if(i.code==='PRD-00655' && Math.floor(i.qty/3)>0){
+          line+='<div class="item disc"><div class="in"><b>PRM-012 · Leve 3 Pague 2 · desconto automático</b></div><span class="amt num">−'+money(Math.floor(i.qty/3)*4.99)+'</span></div>';
+        }
+        return line;
+      }).join('');
+      el.querySelectorAll('.x').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); sale.splice(+b.dataset.ix,1); if(!hasR18()) ageOk=false; render(); }));
+      const ct=$('combo-tg'); if(ct) ct.addEventListener('click',()=>{ comboOpen=!comboOpen; renderItems(); });
+    }
+    const n=sale.reduce((s,i)=>s+(i.type==='un'?i.qty:1),0);
+    $('cnt').textContent=n+(n===1?' item':' itens');
+    $('t-sub').textContent=money(gross());
+    $('t-disc').textContent=(totalDisc()>0?'−':'')+money(totalDisc());
+    $('t-total').textContent=money(grand());
+  }
+
+  function renderAge(){
+    const a=$('age');
+    if(!hasR18()){ a.className='age'; a.innerHTML=''; return; }
+    if(ageOk){
+      a.className='age show done';
+      a.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><span><b>+18 confirmado</b> pelo operador — registrado no cupom e na auditoria.</span>';
+    } else {
+      a.className='age show need';
+      a.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg><span><b>+18</b> — bebida alcoólica/tabaco no cupom: confirme a idade do cliente.</span><button id="age-go">Confirmar +18</button>';
+      $('age-go').addEventListener('click',()=>{ ageOk=true; render(); });
+    }
+  }
+
+  // ---- CPF / fidelidade ----
+  $('cpf-btn').addEventListener('click',()=>{
+    cpfOn=!cpfOn;
+    $('cpf-txt').innerHTML=cpfOn
+      ? 'CPF <b>123.•••.•••-44</b> · cliente identificado · <span class="pts">1.240 pts</span>'
+      : 'CPF na nota? <span style="color:var(--faint)">não informado</span>';
+    $('cpf-btn').textContent=cpfOn?'trocar':'informar';
+  });
+
+  // ---- desconto manual ----
+  function setDisc(p){
+    $('mgr-err').style.display='none'; $('mgr-code') && ($('mgr-code').value='');
+    if(p===0){ discPct=0; discNeedAuth=false; discAuthorized=false; }
+    else if(p<=5){ discPct=p; discNeedAuth=false; discAuthorized=false; }
+    else { discPct=0; discNeedAuth=true; discAuthorized=false; }
+    ['d5','d10'].forEach(id=>$(id).setAttribute('aria-pressed', (id==='d5'&&p===5)||(id==='d10'&&p===10)?'true':'false'));
+    renderDisc(); render();
+  }
+  function renderDisc(){
+    $('dauth').classList.toggle('show', discNeedAuth && !discAuthorized);
+    const ok=$('dok');
+    if(discAuthorized){ ok.classList.add('show'); ok.textContent='✓ Desconto 10% liberado por T. Souza (gerente) às 15h44 — registrado na auditoria.'; }
+    else if(discPct===5){ ok.classList.add('show'); ok.textContent='✓ Desconto 5% dentro da alçada do operador — aplicado.'; }
+    else { ok.classList.remove('show'); ok.textContent=''; }
+  }
+  $('d5').addEventListener('click',()=>setDisc(5));
+  $('d10').addEventListener('click',()=>setDisc(10));
+  $('d0').addEventListener('click',()=>setDisc(0));
+  $('mgr-go').addEventListener('click',()=>{
+    if($('mgr-code').value==='4321'){ discAuthorized=true; discNeedAuth=false; discPct=10; $('d10').setAttribute('aria-pressed','true'); renderDisc(); render(); }
+    else { $('mgr-err').style.display='block'; }
+  });
+
+  // ---- scan / busca ----
+  function addProduct(p){
+    if(p.kg){
+      const peso=+(0.18+Math.random()*0.35).toFixed(3);
+      sale.push({type:'kg', code:p.code, nm:p.nm.replace(' (kg)',''), cat:p.cat, peso:peso, precoKg:p.preco});
+      msg('ok','✓ '+p.code+' · peso lido da balança: '+KG.format(peso)+' kg');
+    } else {
+      const ex=sale.find(i=>i.type==='un'&&i.code===p.code);
+      if(ex) ex.qty++;
+      else sale.push({type:'un', code:p.code, nm:p.nm, ean:p.ean, cat:p.cat, qty:1, preco:p.preco, r18:p.r18, fs:p.fs});
+      msg('ok','✓ '+p.code+' · '+p.nm+' adicionado'+(p.r18?' · item +18':''));
+    }
+    render();
+  }
+  function msg(cls,txt){ const m=$('scan-msg'); m.className='scan-msg '+cls; m.textContent=txt; }
+  $('scan').addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return;
+    const q=e.target.value.trim().toLowerCase(); if(!q) return;
+    const p=CATALOG.find(p=>p.ean===q || p.code.toLowerCase()===q || p.code.toLowerCase().replace('prd-','')===q || p.nm.toLowerCase().includes(q));
+    if(p){ addProduct(p); e.target.value=''; }
+    else msg('err','✕ "'+e.target.value.trim()+'" não encontrado — confira EAN ou código PRD no catálogo');
+  });
+
+  // ---- atalhos por categoria ----
+  let cat='bebidas';
+  function renderCats(){
+    $('cats').innerHTML=CATS.map(c=>'<button class="cat" data-id="'+c.id+'" aria-pressed="'+(c.id===cat)+'"><span class="cdot" style="background:'+c.cor+'"></span>'+c.nm+'</button>').join('');
+    $('cats').querySelectorAll('.cat').forEach(b=>b.addEventListener('click',()=>{ cat=b.dataset.id; renderCats(); renderProds(); }));
+  }
+  function renderProds(){
+    const list=CATALOG.filter(p=>p.cat===cat);
+    $('prods').innerHTML=list.map((p,ix)=>'<button class="prodbtn" data-code="'+p.code+'">'
+      +(p.kg?'<span class="tag kg">pesável</span>':'')+(p.r18&&!p.kg?'<span class="tag r18">+18</span>':'')
+      +'<div class="ph"><span class="dot" style="background:'+catColor(p.cat)+'"></span><b>'+p.nm+'</b></div>'
+      +'<div class="pf"><span class="cd num">'+p.code+'</span><span class="pr num">'+money(p.preco)+(p.kg?'/kg':'')+'</span></div></button>').join('');
+    $('prods').querySelectorAll('.prodbtn').forEach(b=>b.addEventListener('click',()=>addProduct(CATALOG.find(p=>p.code===b.dataset.code))));
+  }
+
+  // ---- pagamento ----
+  function renderPays(){
+    $('pays').innerHTML=methods.map(m=>'<button class="payb" data-id="'+m.id+'" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">'+m.ic+'</svg><b>'+m.nm+'</b><small>'+m.sub+'</small></button>').join('');
+    $('pays').querySelectorAll('.payb').forEach(b=>b.addEventListener('click',()=>pickMethod(b.dataset.id)));
+  }
+  function pickMethod(id){
+    method=id; tefOk=false; pixOk=false; cashIn=null;
+    $('pays').querySelectorAll('.payb').forEach(x=>x.setAttribute('aria-pressed', x.dataset.id===method?'true':'false'));
+    renderExtra(); updateFin();
+  }
+  function methodReady(){
+    if(!method) return false;
+    if(method==='dinheiro') return (cashIn===null? suggestedCash() : cashIn) >= grand()-0.001;
+    if(method==='debito'||method==='credito') return tefOk;
+    if(method==='pix') return pixOk;
+    if(method==='dividir') return split.v1>0 && split.v1<grand();
+    return true;
+  }
+  function suggestedCash(){ return Math.ceil(grand()/10)*10; }
+
+  function fakeQR(){
+    let r='<svg viewBox="0 0 25 25" shape-rendering="crispEdges">';
+    const f=(x,y)=>{ r+='<rect x="'+x+'" y="'+y+'" width="7" height="7" fill="#161A24"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="5" height="5" fill="#fff"/><rect x="'+(x+2)+'" y="'+(y+2)+'" width="3" height="3" fill="#161A24"/>'; };
+    f(0,0); f(18,0); f(0,18);
+    let sd=42;
+    for(let y=0;y<25;y++)for(let x=0;x<25;x++){
+      if((x<8&&y<8)||(x>16&&y<8)||(x<8&&y>16)) continue;
+      sd=(sd*1103515245+12345)&0x7fffffff;
+      if(sd%100<42) r+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="#161A24"/>';
+    }
+    return r+'</svg>';
+  }
+
+  function renderExtra(){
+    const box=$('extra');
+    if(method==='dinheiro'){
+      box.classList.add('show');
+      const v=cashIn===null?suggestedCash():cashIn;
+      const troco=v-grand();
+      box.innerHTML='<label>Valor recebido em dinheiro</label><input id="cash" class="num" inputmode="decimal" value="'+v.toFixed(2).replace('.',',')+'">'
+        +(troco>=-0.001
+          ? '<div class="st ok">✓ Troco: '+money(Math.max(0,troco))+'</div>'
+          : '<div class="st err">✕ Faltam '+money(-troco)+' — complete em outra forma (Dividir · F11)</div>');
+      const inp=$('cash'); inp.focus(); inp.select();
+      inp.addEventListener('input',e=>{ cashIn=parseFloat(e.target.value.replace(/\./g,'').replace(',','.'))||0; renderExtra(); updateFin(); });
+    } else if(method==='debito'||method==='credito'){
+      box.classList.add('show');
+      if(!tefOk){
+        box.innerHTML='<label>TEF · '+(method==='debito'?'débito':'crédito')+'</label><div class="st wait">⏳ Aproxime, insira ou passe o cartão no PIN pad…</div>';
+        setTimeout(()=>{ if(method==='debito'||method==='credito'){ tefOk=true; renderExtra(); updateFin(); } },1500);
+      } else {
+        box.innerHTML='<label>TEF · '+(method==='debito'?'débito':'crédito')+'</label><div class="st ok">✓ Aprovado · '+money(grand())+' · NSU 003412 · aut 88231 · bandeira Visa</div>';
+      }
+    } else if(method==='pix'){
+      box.classList.add('show');
+      box.innerHTML='<label>PIX · QR dinâmico</label><div class="pixbox">'+fakeQR()
+        +'<div class="pin"><div class="v num">'+money(grand())+'</div>'
+        +(pixOk?'<p style="color:var(--ok);font-weight:650">✓ PIX recebido · E2E E6074…1542</p>':'<p>Cliente escaneia o QR no app do banco…</p><p style="color:var(--warn);font-weight:650">⏳ aguardando confirmação</p>')
+        +'</div></div>';
+      if(!pixOk) setTimeout(()=>{ if(method==='pix'){ pixOk=true; renderExtra(); updateFin(); } },2200);
+    } else if(method==='dividir'){
+      box.classList.add('show');
+      const rest=grand()-split.v1;
+      const opts=m=>['dinheiro','debito','credito','pix'].map(id=>'<option value="'+id+'" '+(m===id?'selected':'')+'>'+methods.find(x=>x.id===id).nm+'</option>').join('');
+      box.innerHTML='<label>Dividir em 2 formas</label><div class="grid2">'
+        +'<div><label>Forma 1 · valor</label><select id="sp-m1">'+opts(split.m1)+'</select><input id="sp-v1" class="num" style="margin-top:7px" inputmode="decimal" value="'+split.v1.toFixed(2).replace('.',',')+'"></div>'
+        +'<div><label>Forma 2 · restante</label><select id="sp-m2">'+opts(split.m2)+'</select><div class="st '+(rest>0?'ok':'err')+'" style="margin-top:10px">'+(rest>0?'✓ Restante: '+money(rest):'✕ Valor da forma 1 deve ser menor que o total')+'</div></div></div>';
+      $('sp-m1').addEventListener('change',e=>split.m1=e.target.value);
+      $('sp-m2').addEventListener('change',e=>split.m2=e.target.value);
+      $('sp-v1').addEventListener('input',e=>{ split.v1=parseFloat(e.target.value.replace(/\./g,'').replace(',','.'))||0; const r=grand()-split.v1; const st=box.querySelector('.st'); st.className='st '+(r>0?'ok':'err'); st.innerHTML=r>0?'✓ Restante: '+money(r):'✕ Valor da forma 1 deve ser menor que o total'; updateFin(); });
+    } else {
+      box.classList.remove('show'); box.innerHTML='';
+    }
+  }
+
+  function updateFin(){
+    $('btn-fin').disabled = !(sale.length && methodReady() && (!hasR18()||ageOk) && !(discNeedAuth&&!discAuthorized));
+    const chg=$('chg');
+    if(method==='dinheiro' && grand()>0){
+      const v=cashIn===null?suggestedCash():cashIn;
+      chg.textContent = v>=grand() ? 'Recebido '+money(v)+' · troco '+money(v-grand()) : '';
+    } else chg.textContent='';
+  }
+
+  function render(){ renderItems(); renderAge(); if(method) renderExtra(); updateFin(); }
+
+  // ---- finalizar ----
+  function finalize(){
+    if($('btn-fin').disabled) return;
+    $('cu-tot').textContent=money(grand());
+    let via='';
+    if(method==='dinheiro'){ const v=cashIn===null?suggestedCash():cashIn; via='Dinheiro · recebido '+money(v)+' · troco '+money(v-grand()); }
+    else if(method==='debito') via='Débito · TEF NSU 003412 · aut 88231';
+    else if(method==='credito') via='Crédito · TEF NSU 003412 · aut 88231';
+    else if(method==='pix') via='PIX · E2E E6074…1542 · confirmado';
+    else if(method==='dividir') via=methods.find(x=>x.id===split.m1).nm+' '+money(split.v1)+' + '+methods.find(x=>x.id===split.m2).nm+' '+money(grand()-split.v1);
+    via+=cpfOn?' · CPF na nota · +'+Math.round(grand())+' pts':'';
+    $('cu-via').textContent=via;
+    const cont=$('tg-cont').getAttribute('aria-pressed')==='true';
+    $('cu-ring').className='ring'+(cont?' cont':'');
+    $('cu-h').textContent=cont?'Venda concluída (contingência)':'Venda concluída';
+    $('cu-p').textContent=cont?'NFC-e emitida em contingência — transmite quando o link voltar':'NFC-e autorizada · cupom enviado';
+    $('cupom').classList.add('show');
+  }
+  function reset(){
+    sale=[]; method=null; ageOk=false; tefOk=false; pixOk=false; cashIn=null; comboOpen=false;
+    discPct=0; discNeedAuth=false; discAuthorized=false;
+    ['d5','d10'].forEach(id=>$(id).setAttribute('aria-pressed','false'));
+    renderDisc();
+    $('cupom').classList.remove('show');
+    $('pays').querySelectorAll('.payb').forEach(x=>x.setAttribute('aria-pressed','false'));
+    $('extra').classList.remove('show'); $('extra').innerHTML='';
+    msg('',''); render(); $('scan').focus();
+  }
+
+  $('btn-fin').addEventListener('click',finalize);
+  $('btn-clear').addEventListener('click',reset);
+  $('cu-go').addEventListener('click',reset);
+
+  // ---- banners demo ----
+  [['tg-cont','bn-cont'],['tg-off','bn-off']].forEach(([t,b])=>{
+    $(t).addEventListener('click',()=>{
+      const on=$(t).getAttribute('aria-pressed')!=='true';
+      $(t).setAttribute('aria-pressed',on?'true':'false');
+      $(b).classList.toggle('show',on);
+    });
+  });
+
+  // ---- teclado ----
+  document.addEventListener('keydown',e=>{
+    const k=e.key.toUpperCase();
+    if(k==='F4'){ e.preventDefault(); $('scan').focus(); }
+    else if(k==='F8'){ e.preventDefault(); finalize(); }
+    else if(k==='F1'){ e.preventDefault(); if($('cupom').classList.contains('show')) reset(); }
+    else if(['F5','F6','F7','F9','F11'].includes(k)){ e.preventDefault();
+      pickMethod({F5:'dinheiro',F6:'debito',F7:'credito',F9:'pix',F11:'dividir'}[k]);
+    }
+  });
+
+  seed(); renderCats(); renderProds(); renderPays(); render();
+})();
+</script>

@@ -1,0 +1,242 @@
+<meta charset="utf-8">
+<title>Helix Store — Financeiro</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA;
+    --bad:#C0392B; --bad-tint:#F8E6E3;
+    --warn:#B7791F; --warn-tint:#F6EEDC;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 16px 40px -18px rgba(22,26,36,.22);
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:26px 20px 50px}
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+  .app{max-width:1180px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:15px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcfe)}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; gap:6px}
+  .brand .wm b .store{color:var(--brand)}
+  .brand .wm span{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; line-height:1.3}
+  .tb-right{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted)}
+  .tb-right .avatar{width:30px; height:30px; border-radius:50%; background:var(--brand-tint); color:var(--brand-ink); font-size:11.5px; font-weight:700; display:flex; align-items:center; justify-content:center}
+  .tb-right .who b{display:block; color:var(--ink-2); font-weight:640; font-size:12.5px; line-height:1.25}
+  .tb-right .who span{font-size:11px; color:var(--faint)}
+
+  .main{padding:22px 24px 28px}
+  .phead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap}
+  .phead h1{margin:0; font-size:21px; font-weight:660; letter-spacing:-.02em}
+  .phead .crumb{font-size:11.5px; color:var(--faint); font-weight:600; text-transform:uppercase; margin-bottom:3px}
+  .seg{display:flex; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:3px}
+  .seg button{border:0; background:transparent; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); padding:6px 14px; border-radius:6px; cursor:pointer}
+  .seg button.on{background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .seg button:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
+
+  .view{display:none} .view[data-on]{display:block; animation:rise .24s ease}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){ .view[data-on]{animation:none} }
+
+  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px}
+  @media(max-width:860px){ .kpis{grid-template-columns:1fr} }
+  .kpi{border:1px solid var(--line); border-radius:13px; padding:14px 16px; background:#fff}
+  .kpi .k{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .kpi .v{font-size:24px; font-weight:680; letter-spacing:-.02em; margin-top:4px}
+  .kpi .s{font-size:11.5px; color:var(--muted); margin-top:2px}
+  .kpi.pos .v{color:var(--ok)} .kpi.neg .v{color:var(--bad)}
+
+  .card{border:1px solid var(--line); border-radius:14px; background:#fff; overflow:hidden; margin-bottom:14px}
+  .card .ch{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px 10px; flex-wrap:wrap}
+  .card .ch h2{margin:0; font-size:14.5px; font-weight:640}
+  .card .ch .sub{font-size:11.5px; color:var(--faint)}
+  .stbl{width:100%; border-collapse:collapse; font-size:13px}
+  .stbl th{text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:6px 16px; border-bottom:1px solid var(--line)}
+  .stbl th.r,.stbl td.r{text-align:right}
+  .stbl td{padding:11px 16px; border-bottom:1px solid var(--line-2); vertical-align:middle}
+  .stbl tbody tr:last-child td{border-bottom:0}
+  .stbl tr:hover td{background:var(--surface-2)}
+  .stbl .nn b{font-weight:600}
+  .stbl .nn small{display:block; color:var(--faint); font-size:11px}
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap}
+  .pill.ok{color:var(--ok); background:var(--ok-tint)}
+  .pill.warn{color:var(--warn); background:var(--warn-tint)}
+  .pill.bad{color:var(--bad); background:var(--bad-tint)}
+  .pill .pip{width:6px; height:6px; border-radius:50%; background:currentColor}
+  .btn{font-family:inherit; font-size:11.5px; font-weight:650; padding:6px 12px; border-radius:8px; border:1px solid var(--brand); background:#fff; color:var(--brand-ink); cursor:pointer; white-space:nowrap}
+  .btn:hover{background:var(--brand-tint)}
+  .btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .tag{display:inline-flex; align-items:center; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--servico); background:#F1EDFF; border-radius:6px; padding:2px 8px}
+  .note{padding:0 16px 14px; font-size:11.5px; color:var(--faint)}
+
+  .caption{max-width:1180px; margin:14px auto 0; font-size:11.5px; color:var(--faint); text-align:center}
+  .caption b{color:var(--muted); font-weight:600}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/></linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Financeiro · Grupo Aurora</span></div>
+    </div>
+    <div class="tb-right">
+      <div class="who" style="text-align:right"><b>Abílio S. · Administrador</b><span>Grupo Aurora · sexta, 10 jul 2026</span></div>
+      <span class="avatar">AB</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="phead">
+      <div><div class="crumb">Grupo Aurora · 24 lojas · consolidado</div><h1>Financeiro</h1></div>
+      <div class="seg" role="tablist">
+        <button class="on" data-v="cartoes">Cartões</button>
+        <button data-v="titulos">Títulos</button>
+        <button data-v="extrato">Extrato</button>
+      </div>
+    </div>
+
+    <!-- CARTÕES -->
+    <section class="view" data-view="cartoes" data-on>
+      <div class="kpis">
+        <div class="kpi pos"><div class="k">Conciliação de NSU · julho</div><div class="v num">99,2%</div><div class="s">18.740 de 18.891 NSU casados venda × liquidação</div></div>
+        <div class="kpi neg"><div class="k">Divergência de taxa · mês</div><div class="v num">R$ 1.870</div><div class="s">taxa efetiva acima da contratada · 214 transações</div></div>
+        <div class="kpi pos"><div class="k">Recuperado via contestação</div><div class="v num">R$ 4.310</div><div class="s">no trimestre · CT-0024 e CT-0026 já creditadas</div></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h2>Liquidações de hoje · auditor de taxas</h2><span class="sub">taxa efetiva × contratada, NSU a NSU — divergência vira contestação com um clique</span></div>
+        <div style="overflow-x:auto">
+        <table class="stbl">
+          <thead><tr><th>Data</th><th>Adquirente · bandeira × modalidade</th><th>NSU</th><th class="r">Valor bruto</th><th class="r">Taxa contratada</th><th class="r">Taxa efetiva</th><th class="r">Diferença</th><th>Status</th><th></th></tr></thead>
+          <tbody id="liq-body">
+            <tr><td class="num">10/07</td><td class="nn"><b>Stone · Visa crédito à vista</b><small>LOJ-001 Aurora Centro · lote 2.204</small></td><td class="num">004821</td><td class="r num">R$ 1.284,60</td><td class="r num">1,49%</td><td class="r num">1,49%</td><td class="r num" style="color:var(--ok);font-weight:650">R$ 0,00</td><td><span class="pill ok"><span class="pip"></span>Conciliado</span></td><td></td></tr>
+            <tr><td class="num">10/07</td><td class="nn"><b>Stone · Master débito</b><small>LOJ-014 Aurora Valinhos · lote 2.204</small></td><td class="num">004822</td><td class="r num">R$ 2.410,35</td><td class="r num">0,99%</td><td class="r num">0,99%</td><td class="r num" style="color:var(--ok);font-weight:650">R$ 0,00</td><td><span class="pill ok"><span class="pip"></span>Conciliado</span></td><td></td></tr>
+            <tr data-ct="CT-0031" data-adq="Cielo"><td class="num">10/07</td><td class="nn"><b>Cielo · Visa crédito parcelado</b><small>LOJ-003 Aurora Tatuí · lote 8.117</small></td><td class="num">118204</td><td class="r num">R$ 3.120,00</td><td class="r num">1,49%</td><td class="r num" style="color:var(--bad);font-weight:700">1,89%</td><td class="r num" style="color:var(--bad);font-weight:700">+R$ 12,48</td><td><span class="pill bad"><span class="pip"></span>Divergente</span></td><td class="r"><button class="btn ct">Contestar → CT-0031</button></td></tr>
+            <tr><td class="num">10/07</td><td class="nn"><b>Rede · Master crédito à vista</b><small>LOJ-019 Aurora Santos · lote 5.530</small></td><td class="num">771203</td><td class="r num">R$ 1.842,10</td><td class="r num">1,55%</td><td class="r num">1,55%</td><td class="r num" style="color:var(--ok);font-weight:650">R$ 0,00</td><td><span class="pill ok"><span class="pip"></span>Conciliado</span></td><td></td></tr>
+            <tr data-ct="CT-0032" data-adq="Stone"><td class="num">09/07</td><td class="nn"><b>Stone · Elo crédito à vista</b><small>LOJ-002 Aurora Itu · lote 2.198</small></td><td class="num">004615</td><td class="r num">R$ 986,40</td><td class="r num">1,49%</td><td class="r num" style="color:var(--bad);font-weight:700">1,89%</td><td class="r num" style="color:var(--bad);font-weight:700">+R$ 3,95</td><td><span class="pill bad"><span class="pip"></span>Divergente</span></td><td class="r"><button class="btn ct">Contestar → CT-0032</button></td></tr>
+            <tr><td class="num">09/07</td><td class="nn"><b>Stone · Visa débito</b><small>LOJ-021 Aurora Praia Grande · lote 2.198</small></td><td class="num">004617</td><td class="r num">R$ 3.318,72</td><td class="r num">0,99%</td><td class="r num">0,99%</td><td class="r num" style="color:var(--ok);font-weight:650">R$ 0,00</td><td><span class="pill ok"><span class="pip"></span>Conciliado</span></td><td></td></tr>
+            <tr><td class="num">09/07</td><td class="nn"><b>Cielo · Elo débito</b><small>LOJ-008 Aurora Sorocaba Norte · lote 8.112</small></td><td class="num">118061</td><td class="r num">R$ 1.507,90</td><td class="r num">0,99%</td><td class="r num">0,99%</td><td class="r num" style="color:var(--ok);font-weight:650">R$ 0,00</td><td><span class="pill ok"><span class="pip"></span>Conciliado</span></td><td></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="note">Mostrando os maiores lotes e todos os divergentes. 151 NSU do mês ainda aguardam arquivo da adquirente (D+1).</div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h2>Contestações abertas</h2><span class="sub">acompanhadas por código CT e protocolo da adquirente</span></div>
+        <div style="overflow-x:auto">
+        <table class="stbl">
+          <thead><tr><th>Contestação</th><th>Adquirente · motivo</th><th>Protocolo</th><th class="r">Valor</th><th>Status</th></tr></thead>
+          <tbody id="ct-body">
+            <tr><td class="nn"><b>CT-0030</b><small>aberta 07/07</small></td><td class="nn"><b>Cielo</b><small>crédito parcelado cobrado a 1,89% (contrato 1,49%) · jun–jul</small></td><td class="num">CL-40.318</td><td class="r num">R$ 1.104,20</td><td><span class="pill warn"><span class="pip"></span>Em análise</span></td></tr>
+            <tr><td class="nn"><b>CT-0028</b><small>aberta 24/06</small></td><td class="nn"><b>Stone</b><small>antecipação não contratada aplicada em 3 lojas do Litoral</small></td><td class="num">ST-77.204</td><td class="r num">R$ 612,45</td><td><span class="pill warn"><span class="pip"></span>Aguardando adquirente</span></td></tr>
+            <tr><td class="nn"><b>CT-0026</b><small>aberta 02/06</small></td><td class="nn"><b>Cielo</b><small>taxa de débito Visa acima do contrato · maio</small></td><td class="num">CL-31.882</td><td class="r num">R$ 1.980,00</td><td><span class="pill ok"><span class="pip"></span>Recuperada · creditada 30/06</span></td></tr>
+            <tr><td class="nn"><b>CT-0024</b><small>aberta 12/05</small></td><td class="nn"><b>Rede</b><small>aluguel de POS cobrado após devolução do terminal</small></td><td class="num">RD-19.556</td><td class="r num">R$ 2.330,00</td><td><span class="pill ok"><span class="pip"></span>Recuperada · creditada 09/06</span></td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TÍTULOS -->
+    <section class="view" data-view="titulos">
+      <div class="kpis">
+        <div class="kpi"><div class="k">A pagar · 7 dias</div><div class="v num">R$ 214.600</div><div class="s">86 títulos · 1 título por NF-e captada via DFe</div></div>
+        <div class="kpi"><div class="k">A receber · apps de delivery</div><div class="v num">R$ 8.420</div><div class="s">repasse iFood previsto para qua 15/07</div></div>
+        <div class="kpi pos"><div class="k">Venda da loja</div><div class="v num">à vista</div><div class="s">sem carteira de boletos — caixa entra no dia</div></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h2>Títulos a pagar</h2><span class="sub">nascem do XML da NF-e capturado via DFe — nada redigitado; 1 título por nota</span></div>
+        <div style="overflow-x:auto">
+        <table class="stbl">
+          <thead><tr><th>Fornecedor</th><th>Origem</th><th>Vencimento</th><th class="r">Valor</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="nn"><b>FOR-012 · Ambev</b><small>bebidas · 9 lojas de Sorocaba</small></td><td class="nn"><b>NF-e 128.440</b><small>captada via DFe hoje 08h12</small></td><td class="num">20/07</td><td class="r num">R$ 4.870,00</td><td><span class="pill warn"><span class="pip"></span>Aberto</span></td></tr>
+            <tr><td class="nn"><b>FOR-031 · Coca-Cola FEMSA</b><small>pedido PED-1187 · CD Campinas</small></td><td class="nn"><b>NF-e 88.213</b><small>captada via DFe 09/07</small></td><td class="num">17/07</td><td class="r num">R$ 3.128,40</td><td><span class="pill warn"><span class="pip"></span>Aberto</span></td></tr>
+            <tr><td class="nn"><b>FOR-104 · Frios &amp; Cia</b><small>perecíveis · entrega 2×/semana</small></td><td class="nn"><b>NF-e 12.087</b><small>captada via DFe 09/07</small></td><td class="num">14/07</td><td class="r num">R$ 1.962,75</td><td><span class="pill warn"><span class="pip"></span>Aberto</span></td></tr>
+            <tr><td class="nn"><b>FOR-208 · Distribuidora Vale Doce</b><small>mercearia · Litoral</small></td><td class="nn"><b>NF-e 45.302</b><small>captada via DFe 03/07</small></td><td class="num">08/07</td><td class="r num">R$ 1.418,20</td><td><span class="pill ok"><span class="pip"></span>Pago 08/07</span></td></tr>
+            <tr><td class="nn"><b>FOR-104 · Frios &amp; Cia</b><small>perecíveis · praça Sorocaba</small></td><td class="nn"><b>NF-e 11.994</b><small>captada via DFe 06/07</small></td><td class="num">09/07</td><td class="r num">R$ 2.204,10</td><td><span class="pill ok"><span class="pip"></span>Pago 09/07</span></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="note">Mostrando os títulos da semana. Divergência nota × pedido bloqueia o título antes do vencimento.</div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h2>A receber · repasses de apps</h2><span class="tag">proposta: módulo delivery</span></div>
+        <div style="overflow-x:auto">
+        <table class="stbl">
+          <thead><tr><th>App · período</th><th>Previsto para</th><th class="r">Vendas no app</th><th class="r">Taxa deduzida</th><th class="r">Repasse líquido</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="nn"><b>iFood · semana 04–10/07</b><small>8 lojas com delivery ativo</small></td><td class="num">qua 15/07</td><td class="r num">R$ 10.935,06</td><td class="r num">23% · R$ 2.515,06 <small style="color:var(--ok)">auditada ✓</small></td><td class="r num" style="font-weight:650">R$ 8.420,00</td><td><span class="pill warn"><span class="pip"></span>Previsto</span></td></tr>
+            <tr><td class="nn"><b>iFood · semana 27/06–03/07</b><small>8 lojas com delivery ativo</small></td><td class="num">qua 08/07</td><td class="r num">R$ 10.337,66</td><td class="r num">23% · R$ 2.377,66 <small style="color:var(--ok)">auditada ✓</small></td><td class="r num" style="font-weight:650">R$ 7.960,00</td><td><span class="pill ok"><span class="pip"></span>Recebido 08/07</span></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="note">A taxa do app é auditada pedido a pedido contra o contrato — mesmo motor do auditor de cartões. Conveniência vende à vista: não há boletos de cliente.</div>
+      </div>
+    </section>
+
+    <!-- EXTRATO -->
+    <section class="view" data-view="extrato">
+      <div class="kpis">
+        <div class="kpi pos"><div class="k">Linhas casadas sozinhas · julho</div><div class="v num">97,4%</div><div class="s">liquidação de cartão por valor + data, repasses e títulos</div></div>
+        <div class="kpi"><div class="k">Pendentes de classificação</div><div class="v num">3</div><div class="s">no extrato de hoje · Itaú ag 0912 c/c 44.218-5</div></div>
+        <div class="kpi"><div class="k">Saldo conciliado (D+0)</div><div class="v num">R$ 612.480</div><div class="s">conta movimento · Grupo Aurora</div></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><h2>Extrato bancário · Itaú c/c 44.218-5</h2><span class="sub">cada linha casa automaticamente com liquidação de cartão, repasse de app ou pagamento de título</span></div>
+        <div style="overflow-x:auto">
+        <table class="stbl">
+          <thead><tr><th>Data</th><th>Lançamento no extrato</th><th class="r">Valor</th><th>Casado com</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="num">10/07</td><td class="nn"><b>Crédito Stone · liquidação D+1</b><small>TED 004.918</small></td><td class="r num" style="color:var(--ok)">+R$ 42.318,90</td><td class="nn"><b>Liquidações de 09/07</b><small>312 NSU · valor + data</small></td><td><span class="pill ok"><span class="pip"></span>Casado</span></td></tr>
+            <tr><td class="num">10/07</td><td class="nn"><b>Crédito Cielo · liquidação D+1</b><small>TED 771.520</small></td><td class="r num" style="color:var(--ok)">+R$ 18.204,55</td><td class="nn"><b>Liquidações de 09/07</b><small>141 NSU · valor + data</small></td><td><span class="pill ok"><span class="pip"></span>Casado</span></td></tr>
+            <tr><td class="num">10/07</td><td class="nn"><b>Débito · pagamento de fornecedor</b><small>Frios &amp; Cia</small></td><td class="r num" style="color:var(--bad)">−R$ 2.204,10</td><td class="nn"><b>Título FOR-104 · NF-e 11.994</b><small>pago 09/07</small></td><td><span class="pill ok"><span class="pip"></span>Casado</span></td></tr>
+            <tr><td class="num">10/07</td><td class="nn"><b>Débito · tarifa de manutenção de conta</b><small>lançamento avulso do banco</small></td><td class="r num" style="color:var(--bad)">−R$ 89,90</td><td class="nn"><small>sem correspondente — classificar como despesa bancária</small></td><td><span class="pill warn"><span class="pip"></span>Pendente</span></td></tr>
+            <tr><td class="num">09/07</td><td class="nn"><b>Depósito em dinheiro · transportadora de valores</b><small>malote lojas Sorocaba</small></td><td class="r num" style="color:var(--ok)">+R$ 21.640,00</td><td class="nn"><b>Fechamentos de 08/07 · 9 lojas</b><small>sangrias conferidas</small></td><td><span class="pill ok"><span class="pip"></span>Casado</span></td></tr>
+            <tr><td class="num">08/07</td><td class="nn"><b>Crédito iFood · repasse semanal</b><small>TED 88.410</small></td><td class="r num" style="color:var(--ok)">+R$ 7.960,00</td><td class="nn"><b>Repasse semana 27/06–03/07</b><small>taxa 23% auditada</small></td><td><span class="pill ok"><span class="pip"></span>Casado</span></td></tr>
+            <tr><td class="num">08/07</td><td class="nn"><b>Débito · pagamento de boleto</b><small>Distribuidora Vale Doce</small></td><td class="r num" style="color:var(--bad)">−R$ 1.418,20</td><td class="nn"><b>Título FOR-208 · NF-e 45.302</b><small>pago 08/07</small></td><td><span class="pill ok"><span class="pip"></span>Casado</span></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="note">Mostrando o extrato dos últimos 3 dias. Linhas pendentes entram na fila do contador com sugestão de classificação.</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<p class="caption">Protótipo Helix Store · Financeiro da rede (24 lojas): <b>cada centavo que passa no cartão é auditado NSU a NSU contra a taxa contratada — mesmo motor de conciliação do Helix Fuel; divergência vira contestação CT com protocolo, e o extrato casa sozinho com cartões, repasses e títulos.</b></p>
+
+<script>
+(function(){
+  const tabs=document.querySelectorAll('.seg button');
+  const views=document.querySelectorAll('.view');
+  tabs.forEach(t=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.toggle('on', x===t));
+    views.forEach(v=> v.dataset.view===t.dataset.v ? v.setAttribute('data-on','') : v.removeAttribute('data-on'));
+  }));
+  // auditor de taxas -> contestar liquidação divergente
+  document.querySelectorAll('#liq-body .btn.ct').forEach(b=>b.addEventListener('click',()=>{
+    const tr=b.closest('tr');
+    const ct=tr.dataset.ct, adq=tr.dataset.adq;
+    const proto=(adq==='Cielo'?'CL':'ST')+'-'+(40000+Math.floor(Math.random()*900)).toLocaleString('pt-BR');
+    tr.querySelector('.pill').outerHTML='<span class="pill warn"><span class="pip"></span>'+ct+' aberta · '+adq+' · protocolo '+proto+'</span>';
+    b.remove();
+  }));
+})();
+</script>

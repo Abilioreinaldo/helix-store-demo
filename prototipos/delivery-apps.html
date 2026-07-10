@@ -1,0 +1,407 @@
+<meta charset="utf-8">
+<title>Helix Store — Delivery &amp; apps (PROPOSTA)</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA;
+    --bad:#C0392B; --bad-tint:#F8E6E3; --bad-line:#EEC4BD;
+    --warn:#B7791F; --warn-tint:#F6EEDC; --warn-line:#E6D4A8;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 16px 40px -18px rgba(22,26,36,.22);
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:26px 20px 54px}
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+  .app{max-width:1220px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:15px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcfe)}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; gap:6px}
+  .brand .wm b .store{color:var(--brand)}
+  .brand .wm span{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; line-height:1.3}
+  .whoami{display:flex; align-items:center; gap:9px}
+  .whoami .av{width:30px; height:30px; border-radius:50%; background:var(--brand); color:#fff; display:grid; place-items:center; font-size:12px; font-weight:700}
+  .whoami .nm b{font-size:12.5px; font-weight:600; display:block; line-height:1.2}
+  .whoami .nm span{font-size:10.5px; color:var(--faint)}
+
+  .shell{display:grid; grid-template-columns:225px 1fr}
+  @media(max-width:840px){ .shell{grid-template-columns:1fr} .side{display:none} }
+  .side{border-right:1px solid var(--line); padding:16px 12px; background:var(--surface-2)}
+  .side .grp{font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:12px 12px 6px}
+  .nav{display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:9px; border:0; background:transparent; width:100%; cursor:pointer; font-family:inherit; font-size:13.5px; color:var(--ink-2); font-weight:500; text-align:left}
+  .nav svg{width:17px; height:17px; flex:none; color:var(--muted); stroke-width:1.7}
+  .nav:hover{background:#e7ebf5}
+  .nav[aria-current="true"]{background:var(--brand); color:#fff; font-weight:600}
+  .nav[aria-current="true"] svg{color:#fff}
+  .nav .badge{margin-left:auto; font-size:10.5px; font-weight:700; background:var(--bad); color:#fff; border-radius:999px; padding:1px 7px; min-width:18px; text-align:center}
+  .nav[aria-current="true"] .badge{background:rgba(255,255,255,.25)}
+  .nav:focus-visible{outline:2px solid var(--brand); outline-offset:-2px}
+
+  .main{padding:22px 24px 30px; min-width:0}
+  .phead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap}
+  .phead h1{margin:0; font-size:21px; font-weight:660; letter-spacing:-.02em}
+  .phead .crumb{font-size:11.5px; color:var(--faint); font-weight:600; text-transform:uppercase; margin-bottom:3px}
+  .seg{display:flex; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:3px}
+  .seg button{border:0; background:transparent; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); padding:6px 13px; border-radius:6px; cursor:pointer}
+  .seg button.on{background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+  .view{display:none} .view[data-on]{display:block; animation:rise .24s ease}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){ .view[data-on]{animation:none} }
+
+  /* Banner PROPOSTA */
+  .proposta{display:flex; align-items:flex-start; gap:11px; background:var(--warn-tint); border:1px solid var(--warn-line); border-radius:13px; padding:13px 16px; margin-bottom:18px}
+  .proposta svg{width:19px; height:19px; flex:none; color:var(--warn); stroke-width:2; margin-top:2px}
+  .proposta b{font-size:13px; font-weight:700; color:var(--warn); display:block; letter-spacing:.04em}
+  .proposta span{font-size:12.5px; color:var(--ink-2)}
+
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px}
+  @media(max-width:900px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  .kpi{border:1px solid var(--line); border-radius:13px; padding:13px 15px; background:#fff}
+  .kpi .k{font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .kpi .v{font-size:23px; font-weight:680; letter-spacing:-.02em; margin-top:4px; line-height:1.05}
+  .kpi .v small{font-size:12px; color:var(--muted); font-weight:600}
+  .kpi .s{font-size:11px; color:var(--muted); margin-top:3px}
+  .kpi .s b{color:var(--ok); font-weight:700}
+  .kpi .s b.down{color:var(--bad)}
+
+  .card{border:1px solid var(--line); border-radius:14px; background:#fff; overflow:hidden; margin-bottom:14px}
+  .card .ch{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px 10px}
+  .card .ch h2{margin:0; font-size:14.5px; font-weight:640}
+  .card .ch .sum{font-size:11.5px; color:var(--faint)}
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap}
+  .pill.ok{color:var(--ok); background:var(--ok-tint)}
+  .pill.warn{color:var(--warn); background:var(--warn-tint)}
+  .pill.bad{color:var(--bad); background:var(--bad-tint)}
+  .pill .pip{width:6px; height:6px; border-radius:50%; background:currentColor}
+
+  .stbl{width:100%; border-collapse:collapse; font-size:13px}
+  .stbl th{text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:6px 16px; border-bottom:1px solid var(--line)}
+  .stbl th.r,.stbl td.r{text-align:right}
+  .stbl td{padding:10px 16px; border-bottom:1px solid var(--line-2); vertical-align:middle}
+  .stbl tbody tr:last-child td{border-bottom:0}
+  .stbl tr:hover td{background:var(--surface-2)}
+  .stbl b{font-weight:600}
+  .stbl small{color:var(--faint); font-size:11px; display:block}
+
+  /* Kanban de pedidos */
+  .board{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; align-items:start}
+  @media(max-width:1000px){ .board{grid-template-columns:repeat(2,1fr)} }
+  @media(max-width:640px){ .board{grid-template-columns:1fr} }
+  .col{background:var(--surface-2); border:1px solid var(--line); border-radius:13px; padding:10px; min-height:120px}
+  .col .colh{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:2px 4px 9px}
+  .col .colh b{font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--ink-2)}
+  .col .colh .cnt{font-size:10.5px; font-weight:700; color:var(--faint); background:#fff; border:1px solid var(--line); border-radius:999px; padding:1px 8px}
+  .col.novo{border-top:3px solid var(--bad)}
+  .col.sep{border-top:3px solid var(--warn)}
+  .col.aguarda{border-top:3px solid var(--servico)}
+  .col.desp{border-top:3px solid var(--ok)}
+  .ocard{background:#fff; border:1px solid var(--line); border-radius:11px; padding:11px 12px; margin-bottom:9px; box-shadow:0 1px 2px rgba(22,26,36,.04)}
+  .ocard:last-child{margin-bottom:0}
+  .ocard .oh{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px}
+  .ocard .oh b{font-size:13px; font-weight:700}
+  .ocard .src{font-size:10px; font-weight:700; letter-spacing:.04em; border-radius:5px; padding:2px 6px}
+  .src.ifood{color:#B02A19; background:#FBE9E4}
+  .src.rappi{color:#B25309; background:#FCEEDD}
+  .ocard ul{list-style:none; margin:6px 0; padding:0}
+  .ocard ul li{font-size:12px; color:var(--ink-2); padding:2px 0; display:flex; justify-content:space-between; gap:8px}
+  .ocard ul li .cod{color:var(--faint); font-size:10.5px}
+  .ocard .sub{font-size:11px; color:var(--warn); background:var(--warn-tint); border:1px dashed var(--warn-line); border-radius:8px; padding:6px 9px; margin:6px 0}
+  .ocard .sub b{font-weight:700}
+  .ocard .of{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px}
+  .ocard .of .tot{font-size:13px; font-weight:700}
+  .ocard .meta{font-size:11px; color:var(--muted)}
+  .btn{font-family:inherit; font-size:12px; font-weight:650; border-radius:8px; padding:7px 13px; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink-2)}
+  .btn.primary{background:var(--brand); border-color:var(--brand); color:#fff}
+  .btn.primary:hover{background:var(--brand-ink)}
+  .btn.danger{color:var(--bad); border-color:var(--bad-line)}
+  .btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .empty{font-size:12px; color:var(--faint); text-align:center; padding:16px 6px}
+
+  /* Toggle de publicação */
+  .tgl{position:relative; width:36px; height:20px; border-radius:999px; border:0; cursor:pointer; background:var(--line); transition:background .15s ease; flex:none}
+  .tgl::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition:left .15s ease}
+  .tgl[aria-checked="true"]{background:var(--ok)}
+  .tgl[aria-checked="true"]::after{left:18px}
+  .tgl:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .tgl[disabled]{opacity:.45; cursor:not-allowed}
+
+  .note{display:flex; gap:9px; align-items:flex-start; font-size:12px; color:var(--ink-2); background:var(--brand-tint); border-radius:0 0 13px 13px; padding:11px 16px}
+  .note svg{width:15px; height:15px; flex:none; color:var(--brand); stroke-width:2; margin-top:2px}
+
+  /* Repasse */
+  .settle{display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--line-2)}
+  @media(max-width:900px){ .settle{grid-template-columns:repeat(2,1fr)} }
+  .sitem{padding:12px 14px; border-right:1px solid var(--line-2)}
+  .sitem:last-child{border-right:0}
+  .sitem .sn{font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .sitem .sv{font-size:17px; font-weight:680; font-variant-numeric:tabular-nums; margin-top:2px}
+  .sitem .sv.neg{color:var(--bad)}
+  .sitem .sv.pos{color:var(--ok)}
+  .sitem .ss{font-size:10.5px; color:var(--faint)}
+
+  .caption{max-width:1220px; margin:14px auto 0; font-size:11.5px; color:var(--faint); text-align:center}
+  .caption b{color:var(--muted); font-weight:600}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/></linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Delivery &amp; apps · Aurora Centro (LOJ-004)</span></div>
+    </div>
+    <div class="whoami"><div class="av">AB</div><div class="nm"><b>Abílio S.</b><span>Administrador · Grupo Aurora</span></div></div>
+  </div>
+
+  <div class="shell">
+    <nav class="side">
+      <div class="grp">Rede</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Visão geral</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21V7l6-4 6 4v14"/><path d="M15 11h3a2 2 0 012 2v6a2 2 0 01-2 2"/><path d="M7 9h4M7 13h4"/></svg>Lojas</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Fechamentos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Relatórios</button>
+      <div class="grp">Operação</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 21h10M12 17v4"/></svg>PDV</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/></svg>Estoque &amp; validade</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/><path d="M6 6L5 3H2"/></svg>Reposição</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h11"/></svg>Contagem</button>
+      <button class="nav" aria-current="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>Delivery<span class="badge" id="badge-novos">2</span></button>
+      <div class="grp">Retaguarda</div>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>Produtos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 12l-8 8-9-9V4h7l10 8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Promoções &amp; combos</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18v12H3z"/><path d="M3 10h18"/></svg>Financeiro</button>
+      <button class="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.5-2-3.5-2.4 1a7 7 0 00-2-1.2L14 3h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.5 2 1.5A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.4-1a7 7 0 002 1.2L10 21h4l.5-2.6a7 7 0 002-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>Configurações</button>
+    </nav>
+
+    <main class="main">
+      <div class="proposta" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.6L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.6a2 2 0 00-3.4 0z"/></svg>
+        <div><b>PROPOSTA — nada disto está construído</b><span>Esta tela existe para decidirmos juntos: <b>delivery entra no v1?</b> (iFood, Rappi, app próprio?) Os números abaixo são de demonstração, para provocar a conversa.</span></div>
+      </div>
+
+      <div class="phead">
+        <div><div class="crumb">Aurora Centro (LOJ-004) · Sorocaba · sexta, 10 jul 2026 · 18h42</div><h1>Delivery &amp; apps</h1></div>
+        <div class="seg" id="tabs">
+          <button class="on" data-view="pedidos">Pedidos</button>
+          <button data-view="cardapio">Cardápio no app</button>
+          <button data-view="repasse">Repasse</button>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="k">Pedidos hoje</div><div class="v num">38</div><div class="s">iFood 29 · Rappi 9 · pico 19h–21h</div></div>
+        <div class="kpi"><div class="k">Ticket médio no app</div><div class="v num">R$ 41,20</div><div class="s"><b>▲ 66%</b> vs R$ 24,80 na loja</div></div>
+        <div class="kpi"><div class="k">Taxa do app</div><div class="v num">23%</div><div class="s">comissão + entrega, sobre a venda bruta</div></div>
+        <div class="kpi"><div class="k">Margem líquida do canal</div><div class="v num" style="color:var(--warn)">11,2%</div><div class="s"><b class="down">▼ 17,2 pp</b> vs 28,4% na loja — vale a pena?</div></div>
+      </div>
+
+      <!-- PEDIDOS -->
+      <section class="view" data-view="pedidos" data-on>
+        <div class="card" style="border:0; background:transparent; overflow:visible">
+          <div class="board">
+            <div class="col novo">
+              <div class="colh"><b>Novo</b><span class="cnt" id="cnt-novo">2</span></div>
+              <div id="col-novo">
+                <div class="ocard" id="ped-8412">
+                  <div class="oh"><b>#8412-IF</b><span class="src ifood">iFood</span></div>
+                  <ul>
+                    <li>2× Coca-Cola Lata 350ml <span class="cod">PRD-00412</span></li>
+                    <li>1× Doritos 55g <span class="cod">PRD-00301</span></li>
+                    <li>1× Sanduíche Nat. Frango <span class="cod">PRD-00918</span></li>
+                  </ul>
+                  <div class="of"><span class="tot num">R$ 39,40</span><span class="pill bad"><span class="pip"></span>aceitar em <span class="num" data-count="192">3m12s</span></span></div>
+                  <div class="of"><span class="meta">SLA do app: 5 min ou o pedido cai</span><button class="btn primary" data-accept="ped-8412">Aceitar</button></div>
+                </div>
+                <div class="ocard" id="ped-2291">
+                  <div class="oh"><b>#2291-RP</b><span class="src rappi">Rappi</span></div>
+                  <ul>
+                    <li>6× Heineken Long Neck <span class="cod">PRD-00230</span></li>
+                    <li>1× Carvão 3kg <span class="cod">PRD-01544</span></li>
+                  </ul>
+                  <div class="of"><span class="tot num">R$ 68,80</span><span class="pill warn"><span class="pip"></span>aceitar em <span class="num" data-count="281">4m41s</span></span></div>
+                  <div class="of"><span class="meta">Combo Churrasco não vale no app (PRM-007)</span><button class="btn primary" data-accept="ped-2291">Aceitar</button></div>
+                </div>
+              </div>
+              <div class="empty" id="empty-novo" hidden>Nenhum pedido novo — fila limpa.</div>
+            </div>
+
+            <div class="col sep">
+              <div class="colh"><b>Em separação</b><span class="cnt" id="cnt-sep">1</span></div>
+              <div id="col-sep">
+                <div class="ocard">
+                  <div class="oh"><b>#8409-IF</b><span class="src ifood">iFood</span></div>
+                  <ul>
+                    <li>1× Red Bull Energy 250ml <span class="cod">PRD-00087</span></li>
+                    <li>2× Água Mineral 500ml <span class="cod">PRD-00777</span></li>
+                    <li>1× Pão de Queijo 300g <span class="cod">PRD-01203</span></li>
+                  </ul>
+                  <div class="sub"><b>Ruptura:</b> Red Bull 250ml (PRD-00087) zerou no estoque. Substituição sugerida ao cliente: <b>Coca-Cola Lata 350ml (PRD-00412)</b> — aguardando resposta no app.</div>
+                  <div class="of"><span class="tot num">R$ 36,90</span><span class="pill warn"><span class="pip"></span>separando · 2 de 3 itens</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col aguarda">
+              <div class="colh"><b>Aguardando entregador</b><span class="cnt" id="cnt-aguarda">1</span></div>
+              <div id="col-aguarda">
+                <div class="ocard">
+                  <div class="oh"><b>#8405-IF</b><span class="src ifood">iFood</span></div>
+                  <ul>
+                    <li>4× Skol Lata 350ml <span class="cod">PRD-00655</span></li>
+                    <li>2× Doritos 55g <span class="cod">PRD-00301</span></li>
+                  </ul>
+                  <div class="of"><span class="tot num">R$ 34,90</span><span class="pill warn"><span class="pip"></span>entregador do app a 4 min</span></div>
+                  <div class="of"><span class="meta">Sacola lacrada · balcão delivery</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col desp">
+              <div class="colh"><b>Despachado</b><span class="cnt">3</span></div>
+              <div>
+                <div class="ocard">
+                  <div class="oh"><b>#8398-IF</b><span class="src ifood">iFood</span></div>
+                  <div class="of"><span class="tot num">R$ 52,30</span><span class="pill ok"><span class="pip"></span>saiu 18h21</span></div>
+                </div>
+                <div class="ocard">
+                  <div class="oh"><b>#2284-RP</b><span class="src rappi">Rappi</span></div>
+                  <div class="of"><span class="tot num">R$ 27,40</span><span class="pill ok"><span class="pip"></span>saiu 18h07</span></div>
+                </div>
+                <div class="ocard">
+                  <div class="oh"><b>#8391-IF</b><span class="src ifood">iFood</span></div>
+                  <div class="of"><span class="tot num">R$ 44,10</span><span class="pill ok"><span class="pip"></span>saiu 17h52</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CARDÁPIO -->
+      <section class="view" data-view="cardapio">
+        <div class="card">
+          <div class="ch"><h2>Cardápio publicado nos apps</h2><span class="sum">8 produtos · markup padrão +15% sobre o preço da loja · sincronizado há 4 min</span></div>
+          <div style="overflow-x:auto">
+          <table class="stbl">
+            <thead><tr><th>Código</th><th>Produto</th><th class="r">Preço loja</th><th class="r">Preço app (+15%)</th><th>Status no app</th><th>Publicado</th></tr></thead>
+            <tbody>
+              <tr><td class="num">PRD-00412</td><td><b>Coca-Cola Lata 350ml</b><small>Bebidas · curva A</small></td><td class="r num">R$ 6,50</td><td class="r num">R$ 7,50</td><td><span class="pill ok"><span class="pip"></span>Publicado</span></td><td><button class="tgl" role="switch" aria-checked="true" aria-label="Publicar Coca-Cola Lata no app"></button></td></tr>
+              <tr><td class="num">PRD-00087</td><td><b>Red Bull Energy 250ml</b><small>Bebidas · curva A</small></td><td class="r num">R$ 12,90</td><td class="r num">R$ 14,85</td><td><span class="pill bad"><span class="pip"></span>Pausado por ruptura</span><small style="display:block;margin-top:3px">estoque zerou 17h40 — pausado automaticamente</small></td><td><button class="tgl" role="switch" aria-checked="false" disabled aria-label="Red Bull pausado por ruptura"></button></td></tr>
+              <tr><td class="num">PRD-00655</td><td><b>Skol Lata 350ml</b><small>Bebidas · curva A</small></td><td class="r num">R$ 4,99</td><td class="r num">R$ 5,75</td><td><span class="pill ok"><span class="pip"></span>Publicado</span></td><td><button class="tgl" role="switch" aria-checked="true" aria-label="Publicar Skol Lata no app"></button></td></tr>
+              <tr><td class="num">PRD-00230</td><td><b>Heineken Long Neck 330ml</b><small>Bebidas · curva A</small></td><td class="r num">R$ 8,90</td><td class="r num">R$ 10,25</td><td><span class="pill ok"><span class="pip"></span>Publicado</span></td><td><button class="tgl" role="switch" aria-checked="true" aria-label="Publicar Heineken no app"></button></td></tr>
+              <tr><td class="num">PRD-00918</td><td><b>Sanduíche Natural Frango</b><small>Perecível · curva B</small></td><td class="r num">R$ 16,90</td><td class="r num">R$ 19,45</td><td><span class="pill ok"><span class="pip"></span>Publicado</span></td><td><button class="tgl" role="switch" aria-checked="true" aria-label="Publicar Sanduíche Natural no app"></button></td></tr>
+              <tr><td class="num">PRD-00301</td><td><b>Doritos 55g</b><small>Alimentos · curva B</small></td><td class="r num">R$ 7,50</td><td class="r num">R$ 8,65</td><td><span class="pill ok"><span class="pip"></span>Publicado</span></td><td><button class="tgl" role="switch" aria-checked="true" aria-label="Publicar Doritos no app"></button></td></tr>
+              <tr><td class="num">PRD-00777</td><td><b>Água Mineral 500ml</b><small>Bebidas · curva A</small></td><td class="r num">R$ 3,50</td><td class="r num">R$ 4,05</td><td><span class="pill ok"><span class="pip"></span>Publicado</span></td><td><button class="tgl" role="switch" aria-checked="true" aria-label="Publicar Água Mineral no app"></button></td></tr>
+              <tr><td class="num">PRD-01544</td><td><b>Carvão 3kg</b><small>Alimentos · curva C</small></td><td class="r num">R$ 18,90</td><td class="r num">R$ 21,75</td><td><span class="pill warn"><span class="pip"></span>Não publicado</span></td><td><button class="tgl" role="switch" aria-checked="false" aria-label="Publicar Carvão 3kg no app"></button></td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8h.01M12 11v5"/></svg><span><b>Ruptura pausa o item no app sozinha</b> — o estoque da loja é a fonte da verdade: zerou, o produto sai do ar antes que o cliente compre o que não existe. Voltou estoque, volta ao cardápio. (Mesma leitura da tela Estoque &amp; validade.)</span></div>
+        </div>
+      </section>
+
+      <!-- REPASSE -->
+      <section class="view" data-view="repasse">
+        <div class="card">
+          <div class="ch"><h2>Semana atual — 06 a 12 jul (em aberto)</h2><span class="pill warn"><span class="pip"></span>Repasse previsto qua 15/07</span></div>
+          <div class="settle">
+            <div class="sitem"><div class="sn">Vendas brutas no app</div><div class="sv num">R$ 10.940,00</div><div class="ss">264 pedidos · iFood + Rappi</div></div>
+            <div class="sitem"><div class="sn">Taxa do app (23%)</div><div class="sv num neg">− R$ 2.516,20</div><div class="ss">comissão + entrega</div></div>
+            <div class="sitem"><div class="sn">Promoções custeadas pelo app</div><div class="sv num pos">+ R$ 180,00</div><div class="ss">cupons bancados pela plataforma</div></div>
+            <div class="sitem"><div class="sn">Repasse previsto</div><div class="sv num">R$ 8.603,80</div><div class="ss">crédito em conta qua 15/07</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><h2>Conciliação de repasses anteriores</h2><span class="sum">extrato do app × contrato — mesma tese do auditor de taxas do Financeiro</span></div>
+          <div style="overflow-x:auto">
+          <table class="stbl">
+            <thead><tr><th>Semana</th><th class="r">Vendas brutas</th><th class="r">Taxa cobrada</th><th class="r">Repasse recebido</th><th>Conferência</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><b>29 jun – 05 jul</b><small>pago em 08/07</small></td><td class="r num">R$ 10.180,00</td><td class="r num">23,0%</td><td class="r num">R$ 7.838,60</td><td><span class="pill ok"><span class="pip"></span>Conferido</span></td><td></td></tr>
+              <tr><td><b>22 – 28 jun</b><small>pago em 01/07</small></td><td class="r num">R$ 9.640,00</td><td class="r num" style="color:var(--bad);font-weight:700">24,7%</td><td class="r num">R$ 7.259,00</td><td><span class="pill bad"><span class="pip"></span>Divergente − R$ 163,90</span><small style="display:block;margin-top:3px">contrato prevê 23% — cobrado 24,7%</small></td><td class="r"><button class="btn danger" id="btn-contestar">Contestar</button><small id="ct-ok" hidden style="color:var(--ok);font-weight:650">CT-0042 aberta ✓</small></td></tr>
+              <tr><td><b>15 – 21 jun</b><small>pago em 24/06</small></td><td class="r num">R$ 8.920,00</td><td class="r num">23,0%</td><td class="r num">R$ 6.868,40</td><td><span class="pill ok"><span class="pip"></span>Conferido</span></td><td></td></tr>
+              <tr><td><b>08 – 14 jun</b><small>pago em 17/06</small></td><td class="r num">R$ 8.410,00</td><td class="r num">23,0%</td><td class="r num">R$ 6.475,70</td><td><span class="pill ok"><span class="pip"></span>Conferido</span></td><td></td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8h.01M12 11v5"/></svg><span>O Helix confere <b>toda semana</b> a taxa cobrada contra o contrato — igual ao auditor de taxas de cartão do Financeiro. Divergiu, vira contestação (CT-) com trilha de auditoria.</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<p class="caption">Protótipo Helix Store · <b>PROPOSTA para validação da PO</b> — delivery entra no v1 (iFood, Rappi, app próprio)? O canal traz ticket 66% maior, mas a taxa de 23% derruba a margem para <b>11,2%</b> (vs 28,4% na loja): esse trade-off vale a operação?</p>
+
+<script>
+(function(){
+  // Tabs data-view
+  const tabs=[...document.querySelectorAll('#tabs button')], views=[...document.querySelectorAll('.view')];
+  tabs.forEach(t=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.toggle('on',x===t));
+    views.forEach(v=> v.dataset.view===t.dataset.view ? v.setAttribute('data-on','') : v.removeAttribute('data-on'));
+  }));
+
+  // Countdown de aceite (SLA 5 min)
+  const fmt=s=>Math.floor(s/60)+'m'+String(s%60).padStart(2,'0')+'s';
+  const counts=[...document.querySelectorAll('[data-count]')];
+  setInterval(()=>{
+    counts.forEach(el=>{
+      if(!document.body.contains(el)) return;
+      let s=parseInt(el.dataset.count,10);
+      if(s<=0) return;
+      s--; el.dataset.count=s; el.textContent=fmt(s);
+      const pill=el.closest('.pill');
+      if(pill && s<120){ pill.classList.remove('warn'); pill.classList.add('bad'); }
+      if(s===0){ el.textContent='expirado'; }
+    });
+  },1000);
+
+  // Aceitar pedido: move de Novo -> Em separação
+  const badge=document.getElementById('badge-novos');
+  document.querySelectorAll('[data-accept]').forEach(btn=>btn.addEventListener('click',()=>{
+    const card=document.getElementById(btn.dataset.accept);
+    if(!card) return;
+    // limpa countdown e botão, ajusta pill
+    const pill=card.querySelector('.pill');
+    if(pill){ pill.className='pill warn'; pill.innerHTML='<span class="pip"></span>separando · 0 de '+card.querySelectorAll('ul li').length+' itens'; }
+    const rows=card.querySelectorAll('.of'); if(rows[1]) rows[1].remove();
+    document.getElementById('col-sep').prepend(card);
+    // contadores
+    const nNovo=document.querySelectorAll('#col-novo .ocard').length;
+    const nSep=document.querySelectorAll('#col-sep .ocard').length;
+    document.getElementById('cnt-novo').textContent=nNovo;
+    document.getElementById('cnt-sep').textContent=nSep;
+    badge.textContent=nNovo;
+    if(nNovo===0){ badge.remove(); document.getElementById('empty-novo').hidden=false; }
+  }));
+
+  // Toggles de publicação do cardápio
+  document.querySelectorAll('.tgl:not([disabled])').forEach(t=>t.addEventListener('click',()=>{
+    const on=t.getAttribute('aria-checked')==='true';
+    t.setAttribute('aria-checked', String(!on));
+    const cell=t.closest('tr').querySelector('td:nth-child(5)');
+    cell.innerHTML = !on
+      ? '<span class="pill ok"><span class="pip"></span>Publicado</span>'
+      : '<span class="pill warn"><span class="pip"></span>Não publicado</span>';
+  }));
+
+  // Contestar repasse divergente
+  const bc=document.getElementById('btn-contestar');
+  if(bc) bc.addEventListener('click',()=>{ bc.hidden=true; document.getElementById('ct-ok').hidden=false; });
+})();
+</script>

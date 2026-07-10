@@ -1,0 +1,536 @@
+<meta charset="utf-8">
+<title>Helix Store — Retaguarda · Catálogo de produtos</title>
+<style>
+  :root{
+    --bg:#ECEEF3; --surface:#FFFFFF; --surface-2:#F4F6FB;
+    --ink:#161A24; --ink-2:#333849; --muted:#616779; --faint:#8A90A2;
+    --line:#DFE2EC; --line-2:#ECEEF4;
+    --brand:#3A5CD8; --brand-ink:#2743B4; --brand-tint:#E9EDFC;
+    --ok:#12855A; --ok-tint:#E3F2EA;
+    --bad:#C0392B; --bad-tint:#F8E6E3;
+    --warn:#B7791F; --warn-tint:#F6EEDC; --warn-line:#E6D4A8;
+    --bebidas:#1B6E8C; --alimentos:#CE8A2C; --perecivel:#2E9E6B; --tabacaria:#9C6B14; --servico:#7C5CFF;
+    --shadow:0 1px 2px rgba(22,26,36,.05), 0 16px 40px -18px rgba(22,26,36,.22);
+    --sans:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; padding:26px 20px 50px}
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+  .app{max-width:1220px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:15px 22px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcfe)}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .mark{width:33px; height:33px}
+  .brand .wm b{font-size:15px; letter-spacing:.15em; font-weight:700; display:flex; gap:6px}
+  .brand .wm b .store{color:var(--brand)}
+  .brand .wm span{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; line-height:1.3}
+  .whoami{display:flex; align-items:center; gap:11px}
+  .whoami .date{font-size:11.5px; color:var(--faint); font-weight:600; text-align:right}
+  .whoami .who{text-align:right}
+  .whoami .who b{display:block; font-size:13px; font-weight:650; line-height:1.25}
+  .whoami .who span{font-size:10.5px; color:var(--muted); font-weight:600}
+  .whoami .avatar{width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#7C5CFF,#37A6FF); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:.04em}
+  @media(max-width:820px){ .whoami .date{display:none} }
+
+  .shell{display:grid; grid-template-columns:212px 1fr; min-height:640px}
+  @media(max-width:900px){ .shell{grid-template-columns:1fr} .side{display:none} }
+
+  /* sidebar */
+  .side{border-right:1px solid var(--line); background:var(--surface-2); padding:16px 10px 20px}
+  .nav .grp{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:12px 12px 5px}
+  .nav a{display:block; font-size:13px; font-weight:600; color:var(--ink-2); text-decoration:none; padding:7px 12px; border-radius:9px; margin:1px 0}
+  .nav a:hover{background:#e7ebf5}
+  .nav a[aria-current="true"]{background:var(--brand); color:#fff}
+
+  .main{padding:20px 24px 26px; min-width:0}
+  .view{display:none}
+  .view.on{display:block; animation:rise .22s ease}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+  .crumb{font-size:11.5px; color:var(--faint); font-weight:600; text-transform:uppercase; margin-bottom:3px}
+  h1{margin:0 0 2px; font-size:20px; font-weight:660; letter-spacing:-.02em; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .lead{font-size:12.5px; color:var(--muted); margin:0 0 14px}
+
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:999px}
+  .pill .pip{width:6px; height:6px; border-radius:50%; background:currentColor}
+  .pill.ok{color:var(--ok); background:var(--ok-tint)}
+  .pill.warn{color:var(--warn); background:var(--warn-tint)}
+  .pill.bad{color:var(--bad); background:var(--bad-tint)}
+  .pill.gray{color:var(--muted); background:var(--surface-2)}
+  .pill.brand{color:var(--brand-ink); background:var(--brand-tint)}
+
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px}
+  @media(max-width:760px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  .kpi{border:1px solid var(--line); border-radius:13px; padding:12px 14px; background:#fff}
+  .kpi .k{font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .kpi .v{font-size:19px; font-weight:680; letter-spacing:-.02em; margin-top:3px}
+  .kpi .v small{font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0}
+  .kpi.warn{border-color:var(--warn-line); background:var(--warn-tint)}
+  .kpi.warn .v{color:var(--warn)}
+
+  /* fila "a revisar" */
+  .revise{border:1px solid var(--warn-line); background:var(--warn-tint); border-radius:13px; margin-bottom:14px; overflow:hidden}
+  .revise .rh{display:flex; align-items:center; gap:9px; padding:11px 14px 9px; font-size:13px; font-weight:650}
+  .revise .rh svg{width:17px; height:17px; color:var(--warn); flex:none}
+  .revise .rh span{font-size:11.5px; color:var(--muted); font-weight:500; margin-left:auto; text-align:right}
+  .revise .ri{display:flex; align-items:center; gap:10px; padding:9px 14px; border-top:1px solid var(--warn-line); font-size:12.5px; flex-wrap:wrap; background:rgba(255,255,255,.45)}
+  .revise .ri .ean{font-size:10.5px; font-weight:700; letter-spacing:.05em; color:var(--ink-2); background:#fff; border:1px solid var(--warn-line); border-radius:5px; padding:2px 8px; flex:none}
+  .revise .ri b{font-weight:650}
+  .revise .ri small{color:var(--muted); font-size:11px}
+  .revise .ri button{margin-left:auto; font-family:inherit; font-size:11.5px; font-weight:650; padding:6px 12px; border-radius:9px; border:1px solid var(--brand); background:#fff; color:var(--brand-ink); cursor:pointer; white-space:nowrap}
+  .revise .ri button:hover{background:var(--brand-tint)}
+
+  .tools{display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-bottom:4px}
+  .search{position:relative; flex:1; min-width:230px}
+  .search svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--faint)}
+  .search input{width:100%; font-family:inherit; font-size:13.5px; padding:9px 12px 9px 34px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink)}
+  .search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint)}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin:2px 0 8px}
+  .chip{font-family:inherit; font-size:11px; font-weight:650; padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer; display:inline-flex; align-items:center; gap:6px}
+  .chip .dot{width:7px; height:7px; border-radius:50%; flex:none}
+  .chip:hover{border-color:var(--brand)}
+  .chip.on{background:var(--brand); border-color:var(--brand); color:#fff}
+  .chip:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .lcount{padding:2px 2px 6px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:700}
+
+  .tblwrap{border:1px solid var(--line); border-radius:13px; overflow:hidden}
+  .tblscroll{overflow-x:auto}
+  .stbl{width:100%; border-collapse:collapse; font-size:12.5px; background:#fff; min-width:860px}
+  .stbl th{text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:9px 14px; border-bottom:1px solid var(--line); background:#fff}
+  .stbl th.r,.stbl td.r{text-align:right}
+  .stbl td{padding:10px 14px; border-bottom:1px solid var(--line-2); vertical-align:middle; white-space:nowrap}
+  .stbl tbody tr:last-child td{border-bottom:0}
+  .stbl tbody tr{cursor:pointer; transition:.1s}
+  .stbl tbody tr:hover{background:var(--surface-2)}
+  .stbl .code{font-size:11px; font-weight:700; letter-spacing:.05em; color:var(--brand-ink)}
+  .stbl .cat{display:inline-flex; align-items:center; gap:7px}
+  .stbl .cat .dot{width:8px; height:8px; border-radius:50%}
+  .stbl .ean{font-size:11.5px; color:var(--muted)}
+  .curva{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:7px; font-size:11px; font-weight:750}
+  .curva.A{background:var(--brand-tint); color:var(--brand-ink)}
+  .curva.B{background:var(--surface-2); color:var(--ink-2); border:1px solid var(--line)}
+  .curva.C{background:#fff; color:var(--faint); border:1px dashed var(--line)}
+
+  /* ficha */
+  .back{font-family:inherit; font-size:12px; font-weight:650; color:var(--brand-ink); background:none; border:0; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:6px; margin-bottom:10px}
+  .back:hover{text-decoration:underline}
+  .props{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px}
+  @media(max-width:760px){ .props{grid-template-columns:repeat(2,1fr)} }
+  .prop{border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:var(--surface-2)}
+  .prop .k{font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .prop .v{font-size:13px; font-weight:640; margin-top:2px}
+  .prop .v small{font-weight:500; color:var(--muted); font-size:11px}
+  .prop.warn{border-color:var(--warn-line); background:var(--warn-tint)}
+
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start}
+  @media(max-width:860px){ .cols{grid-template-columns:1fr} }
+
+  .rel{border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:12px; background:#fff}
+  .rel .rh{padding:10px 14px 8px; font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-2); border-bottom:1px solid var(--line-2); background:#fff; display:flex; justify-content:space-between; gap:10px}
+  .rel .rh span{color:var(--faint); font-weight:600; text-transform:none; letter-spacing:0}
+  .rel .rr{display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line-2); font-size:12.5px; background:#fff; flex-wrap:wrap}
+  .rel .rr:last-child{border-bottom:0}
+  .rel .rr .tag{font-size:10.5px; font-weight:700; letter-spacing:.06em; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); border-radius:5px; padding:2px 8px; flex:none}
+  .rel .rr b{font-weight:600}
+  .rel .rr .r{margin-left:auto; color:var(--muted); font-size:11.5px; font-variant-numeric:tabular-nums}
+  .rel .note{font-size:11px; color:var(--muted); padding:9px 14px; background:var(--surface-2); border-top:1px solid var(--line-2)}
+  .rel .note b{font-weight:650; color:var(--ink-2)}
+  .rel .ptbl{width:100%; border-collapse:collapse; font-size:12.5px}
+  .rel .ptbl th{text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:8px 14px; border-bottom:1px solid var(--line-2)}
+  .rel .ptbl th.r,.rel .ptbl td.r{text-align:right}
+  .rel .ptbl td{padding:9px 14px; border-bottom:1px solid var(--line-2)}
+  .rel .ptbl tbody tr:last-child td{border-bottom:0}
+
+  .finkpis{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px}
+  @media(max-width:760px){ .finkpis{grid-template-columns:1fr} }
+  .finkpi{border:1px solid var(--line); border-radius:12px; padding:12px 14px; background:#fff}
+  .finkpi .k{font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  .finkpi .v{font-size:19px; font-weight:680; letter-spacing:-.02em; margin-top:3px}
+  .finkpi .v small{font-size:11px; font-weight:600; color:var(--muted)}
+
+  /* mini bar chart */
+  .spark{display:flex; align-items:flex-end; gap:8px; height:96px; padding:14px 14px 6px}
+  .spark .bcol{flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; height:100%; justify-content:flex-end}
+  .spark .bar{width:100%; max-width:38px; border-radius:5px 5px 2px 2px; background:linear-gradient(180deg,#5B7BE4,var(--brand))}
+  .spark .bar.hi{background:linear-gradient(180deg,#3FBF87,var(--ok))}
+  .spark .bl{font-size:9.5px; color:var(--faint); font-weight:700; letter-spacing:.03em}
+  .sparkleg{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); padding:0 14px 12px; font-variant-numeric:tabular-nums}
+
+  .audit{font-size:11px; color:var(--faint); margin-top:14px; padding-top:12px; border-top:1px solid var(--line-2)}
+  .audit b{color:var(--muted); font-weight:600}
+
+  .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; font-size:13px; font-weight:600; padding:12px 18px; border-radius:12px; box-shadow:0 12px 34px rgba(0,0,0,.28); display:flex; align-items:center; gap:9px; opacity:0; pointer-events:none; transition:.28s; z-index:20; max-width:min(560px,90vw)}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast svg{width:17px; height:17px; color:#61E0A0; flex:none}
+
+  .caption{max-width:1220px; margin:14px auto 0; font-size:11.5px; color:var(--faint); text-align:center}
+  .caption b{color:var(--muted); font-weight:600}
+
+  @media(prefers-reduced-motion:reduce){ .view.on{animation:none} .toast{transition:none} }
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hxA" x1="7" y1="7" x2="33" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#9A6BFF"/><stop offset="1" stop-color="#37A6FF"/></linearGradient>
+          <linearGradient id="hxB" x1="33" y1="7" x2="7" y2="33" gradientUnits="userSpaceOnUse"><stop stop-color="#57C9FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+        </defs>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(45 20 20)" fill="url(#hxA)"/>
+        <rect x="16.5" y="3.5" width="7" height="33" rx="3.5" transform="rotate(-45 20 20)" fill="url(#hxB)"/>
+      </svg>
+      <div class="wm"><b>HELIX <span class="store">STORE</span></b><span>Catálogo de produtos · Grupo Aurora</span></div>
+    </div>
+    <div class="whoami">
+      <div class="date">sexta, 10 jul 2026</div>
+      <div class="who"><b>Abílio S.</b><span>Administrador · Grupo Aurora</span></div>
+      <div class="avatar">AB</div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside class="side">
+      <nav class="nav">
+        <div class="grp">Rede</div>
+        <a href="#">Visão geral</a><a href="#">Lojas</a><a href="#">Fechamentos</a><a href="#">Relatórios</a>
+        <div class="grp">Operação</div>
+        <a href="#">PDV</a><a href="#">Estoque &amp; validade</a><a href="#">Reposição</a><a href="#">Contagem</a><a href="#">Delivery</a>
+        <div class="grp">Retaguarda</div>
+        <a href="#" aria-current="true">Produtos</a><a href="#">Promoções &amp; combos</a><a href="#">Financeiro</a><a href="#">Configurações</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+
+      <!-- ==================== VIEW: LISTA ==================== -->
+      <section class="view on" data-view="lista">
+        <div class="crumb">Retaguarda · Produtos · Rede Aurora Conveniência (24 lojas)</div>
+        <h1>Catálogo de produtos</h1>
+        <p class="lead">Cadastro único da rede · preço de rede com exceção por praça e por loja · curva ABC recalculada toda segunda</p>
+
+        <div class="kpis">
+          <div class="kpi"><div class="k">SKUs ativos</div><div class="v num">3.482</div></div>
+          <div class="kpi"><div class="k">Curva A</div><div class="v num">412 <small>· 74% da venda</small></div></div>
+          <div class="kpi"><div class="k">Margem média da rede</div><div class="v num">28,4%</div></div>
+          <div class="kpi warn"><div class="k">A revisar (vindos de NF-e)</div><div class="v num">3</div></div>
+        </div>
+
+        <div class="revise" id="revise">
+          <div class="rh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+            Produtos a revisar (3) — EANs novos chegaram no XML da NF-e e aguardam cadastro completo
+            <span>o fiscal cria o esqueleto,<br>a retaguarda completa</span>
+          </div>
+          <div class="ri"><span class="ean num">EAN 7891991010932</span><div><b>CERV BRAHMA DM LT 350</b> <small>· NF-e 88.412 · FOR-012 Ambev · hoje 08:12 · sem categoria, sem preço de rede</small></div><button data-ean="7891991010932">Completar cadastro</button></div>
+          <div class="ri"><span class="ean num">EAN 7896004000497</span><div><b>AMENDOIM JAPONES DUNORTE 500G</b> <small>· NF-e 2.231 · FOR-208 Dist. Vale Doce · ontem 16:40 · sem categoria, sem preço</small></div><button data-ean="7896004000497">Completar cadastro</button></div>
+          <div class="ri"><span class="ean num">EAN 7891910000197</span><div><b>ACUCAR REFINADO UNIAO 1KG</b> <small>· NF-e 5.518 · FOR-208 Dist. Vale Doce · ontem 16:40 · sem margem definida</small></div><button data-ean="7891910000197">Completar cadastro</button></div>
+        </div>
+
+        <div class="tools">
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input id="q" type="search" placeholder="Buscar por EAN, nome ou PRD-…" aria-label="Buscar produto">
+          </div>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="lcount" id="lcount"></div>
+
+        <div class="tblwrap"><div class="tblscroll">
+          <table class="stbl">
+            <thead><tr>
+              <th>Código</th><th>Produto</th><th>EAN</th><th>Categoria</th>
+              <th class="r">Preço rede</th><th class="r">Margem</th><th>Curva</th><th class="r">Giro/dia</th><th>Status</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- ==================== VIEW: FICHA COCA ==================== -->
+      <section class="view" data-view="coca">
+        <button class="back" data-back>← Voltar ao catálogo</button>
+        <div class="crumb">Retaguarda · Produtos · Ficha do produto</div>
+        <h1>Coca-Cola Lata 350ml
+          <span class="pill brand" id="cp-coca" title="clique para copiar o código" style="cursor:pointer">PRD-00412</span>
+          <span class="pill ok"><span class="pip"></span>Ativo</span>
+          <span class="pill gray" style="color:var(--bebidas)"><span class="pip"></span>Bebidas</span>
+          <span class="curva A" title="Curva A">A</span>
+        </h1>
+        <p class="lead">EAN 7894900011517 · NCM 2202.10.00 · unidade UN · código imutável — o mesmo <b>PRD-00412</b> aparece no PDV, na etiqueta, no pedido e no relatório</p>
+
+        <div class="props">
+          <div class="prop"><div class="k">EAN principal</div><div class="v num">7894900011517</div></div>
+          <div class="prop"><div class="k">Fornecedor principal</div><div class="v">FOR-031 · Coca-Cola FEMSA</div></div>
+          <div class="prop"><div class="k">Origem do cadastro</div><div class="v">XML NF-e <small>· criado em 03/02/2024 pelo fiscal</small></div></div>
+        </div>
+
+        <div class="cols">
+          <div>
+            <div class="rel">
+              <div class="rh">a · Preço <span>rede → praça → loja</span></div>
+              <table class="ptbl">
+                <thead><tr><th>Escopo</th><th>Onde</th><th class="r">Preço</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Rede</b></td><td style="color:var(--muted)">todas as 24 lojas</td><td class="r num"><b>R$ 6,50</b></td></tr>
+                  <tr><td><span class="pill warn"><span class="pip"></span>Exceção praça</span></td><td>Litoral (7 lojas)</td><td class="r num"><b>R$ 7,00</b></td></tr>
+                  <tr><td><span class="pill warn"><span class="pip"></span>Exceção loja</span></td><td>LOJ-019 · Aurora Guarujá</td><td class="r num"><b>R$ 7,20</b></td></tr>
+                </tbody>
+              </table>
+              <div class="note"><b>Regra de precedência:</b> exceção da loja vence a da praça; a da praça vence a da rede. As demais 23 lojas seguem rede ou praça.</div>
+            </div>
+
+            <div class="rel">
+              <div class="rh">b · Custo &amp; margem <span>competência jul/26</span></div>
+              <div style="padding:12px 14px 0">
+                <div class="finkpis" style="margin-bottom:10px">
+                  <div class="finkpi"><div class="k">Custo médio</div><div class="v num">R$ 4,10</div></div>
+                  <div class="finkpi"><div class="k">Margem s/ preço rede</div><div class="v num" style="color:var(--ok)">36,9%</div></div>
+                  <div class="finkpi"><div class="k">Último custo NF-e</div><div class="v num">R$ 4,18 <small>· 07/07</small></div></div>
+                </div>
+              </div>
+              <div class="note">Último custo veio da <b>NF-e 88.219 · FOR-031 Coca-Cola FEMSA</b> (07/07). Custo subiu 2,0% — margem na exceção do Litoral: 41,4%.</div>
+            </div>
+
+            <div class="rel">
+              <div class="rh">c · Comercial <span>promoções &amp; combos</span></div>
+              <div class="rr"><span class="tag">PRM-</span><b style="color:var(--muted);font-weight:500">Não participa de nenhuma promoção ativa.</b></div>
+              <div class="note">Exemplo na rede: <b>PRD-00655 Skol Lata 350ml</b> participa da <b>PRM-012 · Leve 3 Pague 2</b> (toda a rede, até 31/07).</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="rel">
+              <div class="rh">d · Estoque na rede <span>posição de hoje 06:00</span></div>
+              <div style="padding:12px 14px 0">
+                <div class="finkpis" style="grid-template-columns:1fr 1fr; margin-bottom:10px">
+                  <div class="finkpi"><div class="k">Saldo total (24 lojas)</div><div class="v num">4.812 un</div></div>
+                  <div class="finkpi"><div class="k">Cobertura média</div><div class="v num">5,4 dias</div></div>
+                </div>
+              </div>
+              <div class="rr"><span class="tag">LOJ-019</span><b>Aurora Guarujá</b><span class="pill warn"><span class="pip"></span>0,8 dia</span><span class="r">62 un · sugerido no PED-1187</span></div>
+              <div class="rr"><span class="tag">LOJ-017</span><b>Aurora Santos</b><span class="pill warn"><span class="pip"></span>1,2 dia</span><span class="r">104 un</span></div>
+              <div class="rr"><span class="tag">LOJ-002</span><b>Aurora Itu</b><b style="font-weight:500;color:var(--muted)">1,9 dia</b><span class="r">148 un</span></div>
+              <div class="note">Sem ruptura hoje. 3 lojas com menor cobertura acima — as outras 21 operam com ≥ 3 dias.</div>
+            </div>
+
+            <div class="rel">
+              <div class="rh">e · Fornecedores <span>quem entrega este item</span></div>
+              <div class="rr"><span class="tag">FOR-031</span><b>Coca-Cola FEMSA</b><span class="pill brand"><span class="pip"></span>Principal</span><span class="r">mín. R$ 800 · entrega D+2</span></div>
+              <div class="rr"><span class="tag">FOR-208</span><b>Distribuidora Vale Doce</b><span class="pill gray"><span class="pip"></span>Alternativo</span><span class="r">último custo R$ 4,35</span></div>
+            </div>
+
+            <div class="rel">
+              <div class="rh">f · Giro na rede <span>unidades/semana · últimas 8 semanas</span></div>
+              <div class="spark" aria-label="Giro semanal das últimas 8 semanas">
+                <div class="bcol"><div class="bar" style="height:72%"></div><div class="bl">S18</div></div>
+                <div class="bcol"><div class="bar" style="height:68%"></div><div class="bl">S19</div></div>
+                <div class="bcol"><div class="bar" style="height:76%"></div><div class="bl">S20</div></div>
+                <div class="bcol"><div class="bar" style="height:70%"></div><div class="bl">S21</div></div>
+                <div class="bcol"><div class="bar" style="height:82%"></div><div class="bl">S22</div></div>
+                <div class="bcol"><div class="bar" style="height:79%"></div><div class="bl">S23</div></div>
+                <div class="bcol"><div class="bar" style="height:88%"></div><div class="bl">S24</div></div>
+                <div class="bcol"><div class="bar hi" style="height:100%"></div><div class="bl">S25</div></div>
+              </div>
+              <div class="sparkleg"><span>mín 5.680/sem</span><span>giro atual ≈ <b>890 un/dia</b> · máx 6.240/sem</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="audit">Última alteração por <b>M. Alves</b> em <b>07/07/2026</b> (custo atualizado pela NF-e 88.219) · registro imutável na trilha de auditoria.</div>
+      </section>
+
+      <!-- ==================== VIEW: FICHA PÃO DE QUEIJO ==================== -->
+      <section class="view" data-view="pao">
+        <button class="back" data-back>← Voltar ao catálogo</button>
+        <div class="crumb">Retaguarda · Produtos · Ficha do produto</div>
+        <h1>Pão de Queijo (kg)
+          <span class="pill brand" id="cp-pao" title="clique para copiar o código" style="cursor:pointer">PRD-01203</span>
+          <span class="pill warn"><span class="pip"></span>Pesável · balança</span>
+          <span class="pill gray" style="color:var(--perecivel)"><span class="pip"></span>Perecível</span>
+          <span class="curva A" title="Curva A">A</span>
+        </h1>
+        <p class="lead">Vendido por peso (R$/kg) · código de balança 2001203 · produção própria/forno da loja · <b>validade curta: 2 dias de vida</b></p>
+
+        <div class="props">
+          <div class="prop"><div class="k">Código de balança</div><div class="v num">2001203 <small>· etiqueta EAN-13 gerada na balança</small></div></div>
+          <div class="prop warn"><div class="k">Dias de vida (validade)</div><div class="v">2 dias <small>· entra no radar de validade</small></div></div>
+          <div class="prop"><div class="k">Fornecedor principal</div><div class="v">FOR-104 · Frios &amp; Cia <small>· entrega 2×/semana</small></div></div>
+        </div>
+
+        <div class="cols">
+          <div>
+            <div class="rel">
+              <div class="rh">a · Preço <span>por quilo</span></div>
+              <table class="ptbl">
+                <thead><tr><th>Escopo</th><th>Onde</th><th class="r">Preço/kg</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Rede</b></td><td style="color:var(--muted)">todas as 24 lojas</td><td class="r num"><b>R$ 49,90</b></td></tr>
+                </tbody>
+              </table>
+              <div class="note">Sem exceções de praça ou loja. O PDV multiplica o peso da balança pelo preço/kg vigente na loja.</div>
+            </div>
+            <div class="rel">
+              <div class="rh">b · Custo &amp; margem</div>
+              <div style="padding:12px 14px 0">
+                <div class="finkpis" style="margin-bottom:10px">
+                  <div class="finkpi"><div class="k">Custo médio/kg</div><div class="v num">R$ 20,90</div></div>
+                  <div class="finkpi"><div class="k">Margem</div><div class="v num" style="color:var(--ok)">58,1%</div></div>
+                  <div class="finkpi"><div class="k">Quebra por validade (30d)</div><div class="v num" style="color:var(--warn)">3,2%</div></div>
+                </div>
+              </div>
+              <div class="note">Margem alta compensa a quebra — item perecível: o vencido vira <b>QBR-</b> automático na contagem.</div>
+            </div>
+          </div>
+          <div>
+            <div class="rel">
+              <div class="rh">c · Comercial <span>regra automática de validade</span></div>
+              <div class="rr"><span class="tag">PRM-023</span><b>Validade curta: −30% automático</b><span class="pill ok"><span class="pip"></span>Ativa</span><span class="r">a ≤ 2 dias do vencimento</span></div>
+              <div class="note">Gerada pelo radar de validade — em perecível de vida curta o desconto dispara sozinho, sem gerente digitar preço.</div>
+            </div>
+            <div class="rel">
+              <div class="rh">f · Giro na rede <span>kg/semana · últimas 8 semanas</span></div>
+              <div class="spark" aria-label="Giro semanal em kg das últimas 8 semanas">
+                <div class="bcol"><div class="bar" style="height:64%"></div><div class="bl">S18</div></div>
+                <div class="bcol"><div class="bar" style="height:70%"></div><div class="bl">S19</div></div>
+                <div class="bcol"><div class="bar" style="height:66%"></div><div class="bl">S20</div></div>
+                <div class="bcol"><div class="bar" style="height:78%"></div><div class="bl">S21</div></div>
+                <div class="bcol"><div class="bar" style="height:74%"></div><div class="bl">S22</div></div>
+                <div class="bcol"><div class="bar" style="height:83%"></div><div class="bl">S23</div></div>
+                <div class="bcol"><div class="bar hi" style="height:100%"></div><div class="bl">S24</div></div>
+                <div class="bcol"><div class="bar" style="height:91%"></div><div class="bl">S25</div></div>
+              </div>
+              <div class="sparkleg"><span>mín 480 kg/sem</span><span>giro atual ≈ <b>84 kg/dia</b> · máx 620 kg/sem</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="audit">Última alteração por <b>C. Nunes</b> em <b>01/07/2026</b> (preço/kg reajustado de R$ 47,90 → R$ 49,90) · registro imutável na trilha de auditoria.</div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><span id="toast-msg"></span></div>
+
+<p class="caption">Protótipo Helix Store · Catálogo da rede Aurora (24 lojas). &nbsp;<b>O cadastro nasce do XML da NF-e — o fiscal cria o esqueleto e a retaguarda só completa categoria, preço e margem, ninguém digita produto do zero. E todo item carrega um código PRD- legível, o mesmo na lista, na busca, na etiqueta e no relatório.</b></p>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const CATS={
+    'Bebidas':'var(--bebidas)','Alimentos':'var(--alimentos)','Perecível':'var(--perecivel)',
+    'Tabacaria':'var(--tabacaria)','Serviço':'var(--servico)'
+  };
+
+  // [code, nome, ean, categoria, curva, preçoTexto, margem%, giro/dia texto, status, view]
+  const P=[
+    ['PRD-00412','Coca-Cola Lata 350ml','7894900011517','Bebidas','A','R$ 6,50',36.9,'890 un','ativo','coca'],
+    ['PRD-00087','Red Bull Energy 250ml','9002490100070','Bebidas','A','R$ 12,90',32.0,'340 un','ativo',null],
+    ['PRD-00655','Skol Lata 350ml','7891149010806','Bebidas','A','R$ 4,99',24.5,'610 un','ativo',null],
+    ['PRD-00230','Heineken Long Neck 330ml','7896045506040','Bebidas','A','R$ 8,90',27.0,'260 un','ativo',null],
+    ['PRD-00777','Água Mineral 500ml','7894900530001','Bebidas','A','R$ 3,50',55.0,'720 un','ativo',null],
+    ['PRD-00918','Sanduíche Natural Frango','produção própria','Perecível','B','R$ 16,90',52.0,'210 un','ativo',null],
+    ['PRD-01203','Pão de Queijo (kg)','pesável — balança','Perecível','A','R$ 49,90/kg',58.1,'84 kg','pesavel','pao'],
+    ['PRD-00301','Doritos 55g','7892840818316','Alimentos','B','R$ 7,50',38.0,'180 un','ativo',null],
+    ['PRD-01544','Carvão 3kg','7898915878026','Alimentos','C','R$ 18,90',30.0,'12 un','ativo',null],
+    ['PRD-00990','Café Espresso','food service','Serviço','A','R$ 6,00',71.0,'950 un','ativo',null],
+    ['PRD-00666','Cigarro Marlboro Red','7896098990131','Tabacaria','A','R$ 12,75',14.0,'460 un','ativo',null],
+    ['PRD-01780','Isqueiro Bic Maxi','7891025301516','Tabacaria','B','R$ 8,50',44.0,'95 un','ativo',null],
+    ['PRD-00344','Chiclete Trident Menta 8g','7895800419019','Alimentos','A','R$ 3,25',46.0,'310 un','ativo',null],
+    ['PRD-01602','Gelo em Cubos 2kg','7898921172001','Bebidas','B','R$ 10,00',60.0,'40 un','ativo',null],
+    ['PRD-01455','Preservativo Jontex 3un','7896222720214','Alimentos','C','R$ 15,90',35.0,'9 un','ativo',null],
+    ['PRD-01920','Carregador USB-C Universal','7899838812340','Alimentos','C','R$ 39,90',48.0,'3 un','inativo',null],
+    ['PRD-01098','Sorvete Pote Napolitano 1,5L','7891030003217','Perecível','B','R$ 22,90',33.0,'26 un','ativo',null]
+  ];
+
+  let filter='all', query='';
+
+  const CHIPS=[
+    ['all','Todos · '+P.length,null],
+    ...Object.keys(CATS).map(c=>[c, c+' · '+P.filter(p=>p[3]===c).length, CATS[c]]),
+    ['cA','Curva A · '+P.filter(p=>p[4]==='A').length,null],
+    ['cB','Curva B · '+P.filter(p=>p[4]==='B').length,null],
+    ['cC','Curva C · '+P.filter(p=>p[4]==='C').length,null]
+  ];
+
+  function renderChips(){
+    $('chips').innerHTML=CHIPS.map(c=>`<button class="chip ${filter===c[0]?'on':''}" data-f="${c[0]}">${c[2]?`<span class="dot" style="background:${filter===c[0]?'#fff':c[2]}"></span>`:''}${c[1]}</button>`).join('');
+    $('chips').querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{ filter=b.dataset.f; renderChips(); renderRows(); }));
+  }
+
+  function statusHtml(st){
+    if(st==='pesavel') return '<span class="pill warn"><span class="pip"></span>Pesável</span>';
+    if(st==='inativo') return '<span class="pill gray"><span class="pip"></span>Inativo</span>';
+    return '<span class="pill ok"><span class="pip"></span>Ativo</span>';
+  }
+
+  function filtered(){
+    return P.filter(p=>{
+      if(filter in CATS && p[3]!==filter) return false;
+      if(filter==='cA'&&p[4]!=='A') return false;
+      if(filter==='cB'&&p[4]!=='B') return false;
+      if(filter==='cC'&&p[4]!=='C') return false;
+      if(query && !(p[0]+' '+p[1]+' '+p[2]).toLowerCase().includes(query)) return false;
+      return true;
+    });
+  }
+
+  function renderRows(){
+    const list=filtered();
+    $('lcount').textContent=list.length+' de '+P.length+' produtos · amostra demo (catálogo completo: 3.482 SKUs)';
+    $('tbody').innerHTML=list.map(p=>`
+      <tr data-code="${p[0]}" data-view="${p[9]||''}" tabindex="0" role="button" aria-label="Abrir ficha de ${p[1]}">
+        <td class="code num">${p[0]}</td>
+        <td><b style="font-weight:600">${p[1]}</b></td>
+        <td class="ean num">${p[2]}</td>
+        <td><span class="cat"><span class="dot" style="background:${CATS[p[3]]}"></span>${p[3]}</span></td>
+        <td class="r num"><b>${p[5]}</b></td>
+        <td class="r num">${String(p[6]).replace('.',',')}%</td>
+        <td><span class="curva ${p[4]}">${p[4]}</span></td>
+        <td class="r num">${p[7]}</td>
+        <td>${statusHtml(p[8])}</td>
+      </tr>`).join('');
+    $('tbody').querySelectorAll('tr').forEach(tr=>{
+      const open=()=>{
+        const v=tr.dataset.view;
+        if(v) show(v);
+        else toast('Protótipo: ficha completa disponível em PRD-00412 (Coca-Cola) e PRD-01203 (Pão de Queijo).');
+      };
+      tr.addEventListener('click',open);
+      tr.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); }});
+    });
+  }
+
+  function show(name){
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.dataset.view===name));
+    window.scrollTo({top:0});
+  }
+
+  document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show('lista')));
+
+  $('q').addEventListener('input',e=>{ query=e.target.value.trim().toLowerCase(); renderRows(); });
+
+  function toast(msg){
+    $('toast-msg').textContent=msg;
+    $('toast').classList.add('show');
+    clearTimeout(window.__tt);
+    window.__tt=setTimeout(()=>$('toast').classList.remove('show'),3000);
+  }
+
+  // completar cadastro (fila a revisar)
+  $('revise').querySelectorAll('button[data-ean]').forEach(b=>b.addEventListener('click',()=>{
+    toast('EAN '+b.dataset.ean+': abriria o cadastro pré-preenchido pelo XML — falta categoria, preço de rede e margem.');
+  }));
+
+  // copiar código nas fichas
+  [['cp-coca','PRD-00412'],['cp-pao','PRD-01203']].forEach(([id,code])=>{
+    const el=$(id);
+    if(el) el.addEventListener('click',()=>{ try{navigator.clipboard&&navigator.clipboard.writeText(code);}catch(e){} toast('Código '+code+' copiado — cole na busca para achar o produto na hora.'); });
+  });
+
+  renderChips(); renderRows();
+})();
+</script>
